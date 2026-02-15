@@ -25,11 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function authenticate() {
       initTelegramApp();
       const initDataRaw = getInitDataRaw();
+      console.log('[Auth] initDataRaw present:', !!initDataRaw, 'length:', initDataRaw?.length ?? 0);
 
       if (!initDataRaw) {
-        // Dev mode — skip auth
         setLoading(false);
-        setError('Running outside Telegram');
+        setError('No initData — open from Telegram');
         return;
       }
 
@@ -37,8 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await loginWithTelegram(initDataRaw);
         setAuthToken(result.token);
         setUser(result.user);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Authentication failed');
+        console.log('[Auth] success, user:', result.user.firstName);
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: { error?: string }; status?: number } };
+        const msg = axiosErr.response?.data?.error
+          || (err instanceof Error ? err.message : 'Authentication failed');
+        console.error('[Auth] error:', axiosErr.response?.status, msg);
+        setError(`${axiosErr.response?.status || 'ERR'}: ${msg}`);
       } finally {
         setLoading(false);
       }

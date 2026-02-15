@@ -62,6 +62,9 @@ function AppRoutes() {
           <p className="mt-2 text-sm text-muted-foreground">
             Please open this app from Telegram.
           </p>
+          <p className="mt-4 text-xs text-destructive/70 font-mono break-all">
+            {error}
+          </p>
         </div>
       </div>
     );
