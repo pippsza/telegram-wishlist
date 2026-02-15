@@ -8,7 +8,7 @@ export function WishCreatePage() {
   return (
     <>
       <Header title={t('new_wish')} />
-      <WishForm onSubmit={createWish as (fd: FormData) => Promise<void>} />
+      <WishForm onSubmit={(fd) => createWish(fd).then(() => {})} />
     </>
   );
 }
