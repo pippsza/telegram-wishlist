@@ -135,13 +135,55 @@ html.tg-theme {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Pink theme */
+.pink {
+  --background: #fff0f5;
+  --foreground: #4a2030;
+  --card: #fff5f8;
+  --card-foreground: #4a2030;
+  --popover: #fff5f8;
+  --popover-foreground: #4a2030;
+  --primary: #e8578a;
+  --primary-foreground: #ffffff;
+  --secondary: #fce4ec;
+  --secondary-foreground: #6d2045;
+  --muted: #fce4ec;
+  --muted-foreground: #a06078;
+  --accent: #fce4ec;
+  --accent-foreground: #6d2045;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #f8c8d8;
+  --input: #f8c8d8;
+  --ring: #e8578a;
+}
+
+/* Green theme */
+.green {
+  --background: #f0f9f4;
+  --foreground: #1a3a2a;
+  --card: #f5fbf7;
+  --card-foreground: #1a3a2a;
+  --popover: #f5fbf7;
+  --popover-foreground: #1a3a2a;
+  --primary: #4caf50;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f5e9;
+  --secondary-foreground: #2e5a32;
+  --muted: #e8f5e9;
+  --muted-foreground: #6a8a6e;
+  --accent: #e8f5e9;
+  --accent-foreground: #2e5a32;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #c8e6c9;
+  --input: #c8e6c9;
+  --ring: #4caf50;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
     @apply bg-background text-foreground;
   }
 }

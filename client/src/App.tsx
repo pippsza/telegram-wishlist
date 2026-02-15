@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { SettingsProvider } from '@/context/SettingsContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import { MyWishesPage } from '@/pages/MyWishesPage';
@@ -10,6 +11,7 @@ import { WishEditPage } from '@/pages/WishEditPage';
 import { PairsPage } from '@/pages/PairsPage';
 import { PairDetailPage } from '@/pages/PairDetailPage';
 import { ArchivePage } from '@/pages/ArchivePage';
+import { SettingsPage } from '@/pages/SettingsPage';
 import { InvitePage } from '@/pages/InvitePage';
 import { getStartParam } from '@/lib/telegram';
 
@@ -21,6 +23,16 @@ function StartParamHandler() {
 
   useEffect(() => {
     if (!user) return;
+
+    // Check URL query param (from bot's web_app button)
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteFromUrl = urlParams.get('invite');
+    if (inviteFromUrl) {
+      navigate(`/invite/${inviteFromUrl}`, { replace: true });
+      return;
+    }
+
+    // Check Telegram startParam (from direct Mini App link)
     const startParam = getStartParam();
     if (startParam?.startsWith('invite_')) {
       const code = startParam.replace('invite_', '');
@@ -67,6 +79,7 @@ function AppRoutes() {
         <Route path="/pairs" element={<PairsPage />} />
         <Route path="/pairs/:id" element={<PairDetailPage />} />
         <Route path="/archive" element={<ArchivePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
     </Routes>
     </>
@@ -76,11 +89,13 @@ function AppRoutes() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
+      <SettingsProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </SettingsProvider>
     </QueryClientProvider>
   );
 }

@@ -22,11 +22,14 @@ app.use('/api/users', userRoutes);
 
 app.use(errorHandler);
 
+import { startBot } from './bot';
+
 async function start() {
   await connectDB();
   app.listen(env.port, () => {
     console.log(`Server running on port ${env.port}`);
   });
+  startBot();
 }
 
 start();

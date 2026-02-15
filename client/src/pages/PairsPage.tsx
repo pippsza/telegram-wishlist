@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Loader2, Users } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,17 +8,17 @@ import { PairCard } from '@/components/pairs/PairCard';
 import { PairRequestCard } from '@/components/pairs/PairRequestCard';
 import { InviteLinkModal } from '@/components/pairs/InviteLinkModal';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
-import { Users, Loader2 } from 'lucide-react';
+import { PairListSkeleton } from '@/components/shared/PairSkeleton';
 import { getPairs, respondToPair, sendPairRequest } from '@/api/pairs';
 import { searchUsers } from '@/api/users';
+import { useT } from '@/i18n';
 import type { Pair, PendingRequest, User } from '@/types';
 
 export function PairsPage() {
+  const t = useT();
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [pendingReceived, setPendingReceived] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [searching, setSearching] = useState(false);
@@ -29,16 +29,12 @@ export function PairsPage() {
       const data = await getPairs();
       setPairs(data.pairs);
       setPendingReceived(data.pendingReceived);
-    } catch {
-      // Handle error
-    } finally {
+    } catch { /* */ } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchPairs();
-  }, [fetchPairs]);
+  useEffect(() => { fetchPairs(); }, [fetchPairs]);
 
   const handleSearch = async () => {
     if (searchQuery.length < 2) return;
@@ -46,9 +42,7 @@ export function PairsPage() {
     try {
       const data = await searchUsers(searchQuery);
       setSearchResults(data.users);
-    } catch {
-      // Handle error
-    } finally {
+    } catch { /* */ } finally {
       setSearching(false);
     }
   };
@@ -60,48 +54,26 @@ export function PairsPage() {
       setSearchResults([]);
       setSearchQuery('');
       fetchPairs();
-    } catch {
-      // Handle error
-    } finally {
+    } catch { /* */ } finally {
       setSendingTo(null);
     }
   };
 
   const handleAccept = async (id: string) => {
-    try {
-      await respondToPair(id, 'accept');
-      fetchPairs();
-    } catch {
-      // Handle error
-    }
+    try { await respondToPair(id, 'accept'); fetchPairs(); } catch { /* */ }
   };
 
   const handleDecline = async (id: string) => {
-    try {
-      await respondToPair(id, 'decline');
-      setPendingReceived((prev) => prev.filter((r) => r.id !== id));
-    } catch {
-      // Handle error
-    }
+    try { await respondToPair(id, 'decline'); setPendingReceived((prev) => prev.filter((r) => r.id !== id)); } catch { /* */ }
   };
-
-  if (loading) return <LoadingSpinner />;
 
   return (
     <>
-      <Header title="Pairs" />
+      <Header title={t('pairs')} />
       <div className="flex flex-col gap-4 p-4">
-        {/* Invite link */}
         <InviteLinkModal />
-
-        {/* Username search */}
         <div className="flex gap-2">
-          <Input
-            placeholder="Search by @username..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
+          <Input placeholder={t('search_username')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
           <Button variant="outline" size="icon" onClick={handleSearch} disabled={searching}>
             {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
@@ -115,55 +87,38 @@ export function PairsPage() {
                   <p className="font-medium">{user.firstName} {user.lastName ?? ''}</p>
                   <p className="text-sm text-muted-foreground">@{user.username}</p>
                 </div>
-                <Button
-                  size="sm"
-                  disabled={sendingTo === user.username}
-                  onClick={() => handleSendRequest(user.username!)}
-                >
-                  {sendingTo === user.username ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Send request'
-                  )}
+                <Button size="sm" disabled={sendingTo === user.username} onClick={() => handleSendRequest(user.username!)}>
+                  {sendingTo === user.username ? <Loader2 className="h-4 w-4 animate-spin" /> : t('send_request')}
                 </Button>
               </div>
             ))}
           </div>
         )}
 
-        {/* Pending requests */}
-        {pendingReceived.length > 0 && (
+        {loading ? (
+          <PairListSkeleton />
+        ) : (
           <>
-            <Separator />
-            <h2 className="text-sm font-semibold text-muted-foreground">Incoming requests</h2>
-            {pendingReceived.map((req) => (
-              <PairRequestCard
-                key={req.id}
-                request={req}
-                onAccept={handleAccept}
-                onDecline={handleDecline}
-              />
-            ))}
+            {pendingReceived.length > 0 && (
+              <>
+                <Separator />
+                <h2 className="text-sm font-semibold text-muted-foreground">{t('incoming_requests')}</h2>
+                {pendingReceived.map((req) => (
+                  <PairRequestCard key={req.id} request={req} onAccept={handleAccept} onDecline={handleDecline} />
+                ))}
+              </>
+            )}
+            {pairs.length > 0 && (
+              <>
+                <Separator />
+                <h2 className="text-sm font-semibold text-muted-foreground">{t('your_pairs')}</h2>
+                {pairs.map((pair) => <PairCard key={pair.id} pair={pair} />)}
+              </>
+            )}
+            {pairs.length === 0 && pendingReceived.length === 0 && (
+              <EmptyState icon={<Users className="h-12 w-12" />} title={t('no_pairs')} description={t('no_pairs_hint')} />
+            )}
           </>
-        )}
-
-        {/* Active pairs */}
-        {pairs.length > 0 && (
-          <>
-            <Separator />
-            <h2 className="text-sm font-semibold text-muted-foreground">Your pairs</h2>
-            {pairs.map((pair) => (
-              <PairCard key={pair.id} pair={pair} />
-            ))}
-          </>
-        )}
-
-        {pairs.length === 0 && pendingReceived.length === 0 && (
-          <EmptyState
-            icon={<Users className="h-12 w-12" />}
-            title="No pairs yet"
-            description="Create an invite link or search by username to add a pair."
-          />
         )}
       </div>
     </>

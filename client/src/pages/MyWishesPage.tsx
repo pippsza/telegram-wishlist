@@ -1,79 +1,172 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Header } from '@/components/layout/Header';
 import { WishList } from '@/components/wishes/WishList';
+import { FilterBar } from '@/components/wishes/FilterBar';
+import { WishDetailModal } from '@/components/wishes/WishDetailModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { getMyWishes, deleteWish, markWishReceived } from '@/api/wishes';
-import type { Wish } from '@/types';
+import { getMyWishes, getAllPartnerWishes, deleteWish, markWishReceived, sendWishToChat } from '@/api/wishes';
+import { useT } from '@/i18n';
+import type { Wish, WishPriority } from '@/types';
 
 export function MyWishesPage() {
   const navigate = useNavigate();
-  const [wishes, setWishes] = useState<Wish[]>([]);
-  const [loading, setLoading] = useState(true);
+  const t = useT();
+  const [myWishes, setMyWishes] = useState<Wish[]>([]);
+  const [partnerWishes, setPartnerWishes] = useState<Wish[]>([]);
+  const [loadingMy, setLoadingMy] = useState(true);
+  const [loadingPartner, setLoadingPartner] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedWish, setSelectedWish] = useState<Wish | null>(null);
+  const [tab, setTab] = useState('my');
 
-  const fetchWishes = useCallback(async () => {
+  // Filters
+  const [search, setSearch] = useState('');
+  const [priority, setPriority] = useState<WishPriority | 'all'>('all');
+  const [selectedTag, setSelectedTag] = useState<string | 'all'>('all');
+
+  const fetchMyWishes = useCallback(async () => {
     try {
       const data = await getMyWishes();
-      setWishes(data.wishes);
-    } catch {
-      // Handle error
+      setMyWishes(data.wishes);
+    } catch (err) {
+      console.error('Failed to fetch my wishes:', err);
     } finally {
-      setLoading(false);
+      setLoadingMy(false);
+    }
+  }, []);
+
+  const fetchPartnerWishes = useCallback(async () => {
+    try {
+      const data = await getAllPartnerWishes();
+      setPartnerWishes(data.wishes);
+    } catch (err) {
+      console.error('Failed to fetch partner wishes:', err);
+    } finally {
+      setLoadingPartner(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchWishes();
-  }, [fetchWishes]);
+    fetchMyWishes();
+    fetchPartnerWishes();
+  }, [fetchMyWishes, fetchPartnerWishes]);
+
+  const currentWishes = tab === 'my' ? myWishes : partnerWishes;
+  const currentLoading = tab === 'my' ? loadingMy : loadingPartner;
+
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    currentWishes.forEach((w) => w.tags.forEach((t) => tags.add(t)));
+    return Array.from(tags);
+  }, [currentWishes]);
+
+  const filtered = useMemo(() => {
+    let result = currentWishes;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((w) => w.description.toLowerCase().includes(q));
+    }
+    if (priority !== 'all') {
+      result = result.filter((w) => w.priority === priority);
+    }
+    if (selectedTag !== 'all') {
+      result = result.filter((w) => w.tags.includes(selectedTag));
+    }
+    return result;
+  }, [currentWishes, search, priority, selectedTag]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await deleteWish(deleteId);
-      setWishes((prev) => prev.filter((w) => w._id !== deleteId));
-    } catch {
-      // Handle error
-    }
+      setMyWishes((prev) => prev.filter((w) => w._id !== deleteId));
+    } catch (err) { console.error('Delete wish error:', err); }
   };
 
   const handleReceive = async (id: string) => {
     try {
       await markWishReceived(id);
-      setWishes((prev) => prev.filter((w) => w._id !== id));
-    } catch {
-      // Handle error
-    }
+      setMyWishes((prev) => prev.filter((w) => w._id !== id));
+      setPartnerWishes((prev) => prev.filter((w) => w._id !== id));
+    } catch (err) { console.error('Mark received error:', err); }
+  };
+
+  const handleSendToChat = async (wish: Wish) => {
+    try {
+      await sendWishToChat(wish._id);
+    } catch (err) { console.error('Send to chat error:', err); }
   };
 
   return (
     <>
-      <Header title="My Wishes" />
-      <WishList
-        wishes={wishes}
-        loading={loading}
-        variant="own"
-        emptyMessage="No wishes yet. Add your first one!"
-        onDelete={setDeleteId}
-        onReceive={handleReceive}
-      />
+      <Header title={t('my_wishes')} />
+
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="mx-4 mt-2 grid w-[calc(100%-2rem)] grid-cols-2">
+          <TabsTrigger value="my">{t('archive_my_wishes')}</TabsTrigger>
+          <TabsTrigger value="partners">{t('archive_from_partners')}</TabsTrigger>
+        </TabsList>
+
+        <FilterBar
+          search={search}
+          onSearchChange={setSearch}
+          priority={priority}
+          onPriorityChange={setPriority}
+          tags={allTags}
+          selectedTag={selectedTag}
+          onTagChange={setSelectedTag}
+        />
+
+        <TabsContent value="my" className="mt-0">
+          <WishList
+            wishes={filtered}
+            loading={currentLoading}
+            variant="own"
+            emptyMessage={t('no_wishes_hint')}
+            onWishClick={setSelectedWish}
+          />
+        </TabsContent>
+
+        <TabsContent value="partners" className="mt-0">
+          <WishList
+            wishes={filtered}
+            loading={currentLoading}
+            variant="partner"
+            emptyMessage={t('no_partner_wishes')}
+            onWishClick={setSelectedWish}
+          />
+        </TabsContent>
+      </Tabs>
 
       <Button
-        className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+        className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg"
         size="icon"
         onClick={() => navigate('/wishes/new')}
       >
         <Plus className="h-6 w-6" />
       </Button>
 
+      <WishDetailModal
+        wish={selectedWish}
+        open={!!selectedWish}
+        onOpenChange={(open) => !open && setSelectedWish(null)}
+        variant={tab === 'my' ? 'own' : 'partner'}
+        onEdit={(id) => navigate(`/wishes/${id}/edit`)}
+        onDelete={setDeleteId}
+        onReceive={handleReceive}
+        onSendToChat={handleSendToChat}
+      />
+
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete wish"
-        description="Are you sure you want to delete this wish?"
-        confirmLabel="Delete"
+        title={t('delete_title')}
+        description={t('delete_description')}
+        confirmLabel={t('delete_confirm')}
         onConfirm={handleDelete}
         destructive
       />

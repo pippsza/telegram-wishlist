@@ -1,32 +1,53 @@
-import { init, retrieveLaunchParams, miniApp, themeParams, backButton } from '@telegram-apps/sdk-react';
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        initData: string;
+        initDataUnsafe: Record<string, unknown>;
+        ready: () => void;
+        expand: () => void;
+        close: () => void;
+        platform: string;
+        colorScheme: string;
+        themeParams: Record<string, string>;
+        MainButton: {
+          show: () => void;
+          hide: () => void;
+          setText: (text: string) => void;
+          onClick: (cb: () => void) => void;
+        };
+        BackButton: {
+          show: () => void;
+          hide: () => void;
+          onClick: (cb: () => void) => void;
+        };
+      };
+    };
+  }
+}
+
+function getWebApp() {
+  return window.Telegram?.WebApp;
+}
 
 export function initTelegramApp() {
-  try {
-    init();
-    miniApp.mount();
-    themeParams.mount();
-    backButton.mount();
-    miniApp.ready();
-  } catch {
-    // Running outside Telegram (development)
-    console.warn('Telegram SDK init failed — running in dev mode');
+  const webApp = getWebApp();
+  if (webApp) {
+    webApp.ready();
+    webApp.expand();
+    console.log('Telegram WebApp initialized, platform:', webApp.platform);
+    console.log('initData length:', webApp.initData?.length);
+  } else {
+    console.warn('Telegram WebApp not available — running in dev mode');
   }
 }
 
 export function getInitDataRaw(): string | undefined {
-  try {
-    const { initDataRaw } = retrieveLaunchParams();
-    return initDataRaw;
-  } catch {
-    return undefined;
-  }
+  const data = getWebApp()?.initData;
+  return data || undefined;
 }
 
 export function getStartParam(): string | undefined {
-  try {
-    const { startParam } = retrieveLaunchParams();
-    return startParam;
-  } catch {
-    return undefined;
-  }
+  const initDataUnsafe = getWebApp()?.initDataUnsafe as { start_param?: string } | undefined;
+  return initDataUnsafe?.start_param;
 }

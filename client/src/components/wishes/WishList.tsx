@@ -1,5 +1,5 @@
 import { WishCard } from './WishCard';
-import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
+import { WishListSkeleton } from '@/components/shared/WishSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Gift } from 'lucide-react';
 import type { Wish } from '@/types';
@@ -9,8 +9,7 @@ interface WishListProps {
   loading: boolean;
   variant: 'own' | 'partner' | 'archived';
   emptyMessage?: string;
-  onDelete?: (id: string) => void;
-  onReceive?: (id: string) => void;
+  onWishClick?: (wish: Wish) => void;
 }
 
 export function WishList({
@@ -18,10 +17,9 @@ export function WishList({
   loading,
   variant,
   emptyMessage = 'No wishes yet',
-  onDelete,
-  onReceive,
+  onWishClick,
 }: WishListProps) {
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <WishListSkeleton />;
 
   if (wishes.length === 0) {
     return (
@@ -39,8 +37,7 @@ export function WishList({
           key={wish._id}
           wish={wish}
           variant={variant}
-          onDelete={onDelete}
-          onReceive={onReceive}
+          onClick={onWishClick}
         />
       ))}
     </div>
