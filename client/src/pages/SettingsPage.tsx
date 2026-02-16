@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LogOut } from 'lucide-react';
+import { LogOut, Shield } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
+import { checkAdmin } from '@/api/admin';
 import { useSettings, useT, type Locale, type Theme } from '@/i18n';
 
 const languages: { value: Locale; label: string }[] = [
@@ -28,9 +31,15 @@ const themes: { value: Theme; key: 'theme_light' | 'theme_dark' | 'theme_pink' |
 ];
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const { logout } = useAuth();
   const { locale, setLocale, theme, setTheme } = useSettings();
   const t = useT();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    checkAdmin().then((d) => setIsAdmin(d.isAdmin)).catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -80,6 +89,13 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {isAdmin && (
+          <Button variant="outline" onClick={() => navigate('/admin')}>
+            <Shield className="mr-2 h-4 w-4" />
+            Admin Panel
+          </Button>
+        )}
 
         <Button variant="outline" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />

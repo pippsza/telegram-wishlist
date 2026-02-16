@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Search, Loader2, Users, Link as LinkIcon, AtSign, Trash2 } from 'lucide-react';
+import { Search, Loader2, Users, Link as LinkIcon, AtSign, X } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -87,6 +87,15 @@ export function PairsPage() {
     try {
       await deletePair(deletePairId);
       setPairs((prev) => prev.filter((p) => p.id !== deletePairId));
+      setPendingSent((prev) => prev.filter((p) => p.id !== deletePairId));
+      toast.success(t('toast_pair_deleted'));
+    } catch { toast.error(t('toast_error')); }
+  };
+
+  const handleCancelSent = async (id: string) => {
+    try {
+      await deletePair(id);
+      setPendingSent((prev) => prev.filter((p) => p.id !== id));
       toast.success(t('toast_pair_deleted'));
     } catch { toast.error(t('toast_error')); }
   };
@@ -107,11 +116,11 @@ export function PairsPage() {
           <div className="flex flex-col gap-2 rounded-lg border p-3">
             {searchResults.map((user) => (
               <div key={user.id} className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{user.firstName} {user.lastName ?? ''}</p>
-                  <p className="text-sm text-muted-foreground">@{user.username}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{user.firstName} {user.lastName ?? ''}</p>
+                  <p className="text-sm text-muted-foreground truncate">@{user.username}</p>
                 </div>
-                <Button size="sm" disabled={sendingTo === user.username} onClick={() => handleSendRequest(user.username!)}>
+                <Button size="sm" className="shrink-0 ml-2" disabled={sendingTo === user.username} onClick={() => handleSendRequest(user.username!)}>
                   {sendingTo === user.username ? <Loader2 className="h-4 w-4 animate-spin" /> : t('send_request')}
                 </Button>
               </div>
@@ -141,16 +150,24 @@ export function PairsPage() {
                   <Card key={req.id} className="opacity-70">
                     <CardContent className="flex items-center gap-3 p-4">
                       {req.inviteMethod === 'link' ? (
-                        <LinkIcon className="h-5 w-5 text-muted-foreground" />
+                        <LinkIcon className="h-5 w-5 shrink-0 text-muted-foreground" />
                       ) : (
-                        <AtSign className="h-5 w-5 text-muted-foreground" />
+                        <AtSign className="h-5 w-5 shrink-0 text-muted-foreground" />
                       )}
                       <span className="flex-1 text-sm">
                         {req.inviteMethod === 'link' ? t('pending_sent_link') : t('pending_sent_username')}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         {new Date(req.createdAt).toLocaleDateString()}
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleCancelSent(req.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -162,19 +179,7 @@ export function PairsPage() {
                 <Separator />
                 <h2 className="text-sm font-semibold text-muted-foreground">{t('your_pairs')}</h2>
                 {pairs.map((pair) => (
-                  <div key={pair.id} className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <PairCard pair={pair} />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => setDeletePairId(pair.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <PairCard key={pair.id} pair={pair} onDelete={setDeletePairId} />
                 ))}
               </>
             )}

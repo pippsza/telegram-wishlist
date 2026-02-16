@@ -1,14 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ChevronRight, Trash2 } from 'lucide-react';
 import type { Pair } from '@/types';
 
 interface PairCardProps {
   pair: Pair;
+  onDelete?: (id: string) => void;
 }
 
-export function PairCard({ pair }: PairCardProps) {
+export function PairCard({ pair, onDelete }: PairCardProps) {
   const navigate = useNavigate();
   const { partner } = pair;
 
@@ -18,7 +20,7 @@ export function PairCard({ pair }: PairCardProps) {
       onClick={() => navigate(`/pairs/${pair.id}`)}
     >
       <CardContent className="flex items-center gap-3 p-4">
-        <Avatar>
+        <Avatar className="shrink-0">
           <AvatarImage src={partner.photoUrl} />
           <AvatarFallback>
             {partner.firstName?.[0] ?? '?'}
@@ -29,10 +31,21 @@ export function PairCard({ pair }: PairCardProps) {
             {partner.firstName} {partner.lastName ?? ''}
           </p>
           {partner.username && (
-            <p className="text-sm text-muted-foreground">@{partner.username}</p>
+            <p className="text-sm text-muted-foreground truncate">@{partner.username}</p>
           )}
         </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        {onDelete ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={(e) => { e.stopPropagation(); onDelete(pair.id); }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : (
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+        )}
       </CardContent>
     </Card>
   );
