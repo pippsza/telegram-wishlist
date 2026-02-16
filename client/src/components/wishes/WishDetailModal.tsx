@@ -7,7 +7,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PriorityBadge } from './PriorityBadge';
-import { ExternalLink, Send, CheckCircle, Pencil, Trash2 } from 'lucide-react';
+import { ExternalLink, Send, CheckCircle, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
 import { useT } from '@/i18n';
 import type { Wish } from '@/types';
 
@@ -19,6 +19,7 @@ interface WishDetailModalProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onReceive?: (id: string) => void;
+  onUnarchive?: (id: string) => void;
   onSendToChat?: (wish: Wish) => void;
 }
 
@@ -30,6 +31,7 @@ export function WishDetailModal({
   onEdit,
   onDelete,
   onReceive,
+  onUnarchive,
   onSendToChat,
 }: WishDetailModalProps) {
   const t = useT();
@@ -76,6 +78,13 @@ export function WishDetailModal({
             <p className="text-sm text-muted-foreground">
               {t('wish_received_date')} {new Date(wish.receivedAt).toLocaleDateString()}
             </p>
+          )}
+
+          {variant === 'archived' && onUnarchive && (
+            <Button variant="outline" size="sm" onClick={() => { onUnarchive(wish._id); onOpenChange(false); }}>
+              <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" />
+              {t('wish_unarchive')}
+            </Button>
           )}
 
           <div className="flex flex-wrap gap-2 pt-2">

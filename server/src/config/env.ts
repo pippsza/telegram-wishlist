@@ -17,4 +17,5 @@ export const env = {
   botToken: requireEnv('BOT_TOKEN'),
   jwtSecret: requireEnv('JWT_SECRET'),
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  adminUsernames: (process.env.ADMIN_USERNAMES || '').split('.').filter(Boolean),
 };

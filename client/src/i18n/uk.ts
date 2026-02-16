@@ -29,6 +29,7 @@ export const uk: Record<TranslationKey, string> = {
   wish_mark_received: 'Отримано',
   wish_received_date: 'Отримано',
   wish_send_to_chat: 'Надіслати в чат',
+  wish_unarchive: 'Відновити',
   wish_not_found: 'Бажання не знайдено',
 
   priority_high: 'Високий',
@@ -82,4 +83,29 @@ export const uk: Record<TranslationKey, string> = {
   open_from_telegram: 'Відкрийте додаток з Telegram.',
 
   link: 'Посилання',
+
+  toast_wish_created: 'Бажання створено!',
+  toast_wish_updated: 'Бажання оновлено!',
+  toast_wish_deleted: 'Бажання видалено',
+  toast_wish_received: 'Відмічено як отримане',
+  toast_wish_unarchived: 'Бажання відновлено',
+  toast_sent_to_chat: 'Надіслано в чат',
+  toast_pair_request_sent: 'Запит надіслано',
+  toast_pair_accepted: 'Пару створено!',
+  toast_pair_declined: 'Запит відхилено',
+  toast_pair_deleted: 'Пару видалено',
+  toast_link_copied: 'Посилання скопійовано',
+  toast_error: 'Щось пішло не так',
+  toast_logged_out: 'Ви вийшли',
+
+  logout: 'Вийти',
+  pending_sent: 'Надіслані запити',
+  pending_sent_link: 'Посилання-запрошення',
+  pending_sent_username: 'Запит користувачу',
+  delete_pair: 'Видалити пару',
+  delete_pair_title: 'Видалити пару',
+  delete_pair_description: 'Ти впевнений, що хочеш видалити цього партнера?',
+  sort_newest: 'Нові',
+  sort_priority: 'За пріоритетом',
+  sort_alpha: 'А-Я',
 };

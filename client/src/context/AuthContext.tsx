@@ -8,18 +8,25 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   error: null,
+  logout: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const logout = () => {
+    setUser(null);
+    setAuthToken('');
+  };
 
   useEffect(() => {
     async function authenticate() {
@@ -53,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error }}>
+    <AuthContext.Provider value={{ user, loading, error, logout }}>
       {children}
     </AuthContext.Provider>
   );

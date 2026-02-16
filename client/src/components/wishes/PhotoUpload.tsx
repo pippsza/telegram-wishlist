@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useT } from '@/i18n';
 
 interface PhotoUploadProps {
   initialUrl?: string;
@@ -9,18 +10,31 @@ interface PhotoUploadProps {
 }
 
 export function PhotoUpload({ initialUrl, onFileChange, onRemoveExisting }: PhotoUploadProps) {
+  const t = useT();
   const [preview, setPreview] = useState<string | null>(initialUrl ?? null);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [objectUrl]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (file) {
-      setPreview(URL.createObjectURL(file));
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      const url = URL.createObjectURL(file);
+      setObjectUrl(url);
+      setPreview(url);
       onFileChange(file);
     }
   };
 
   const handleRemove = () => {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    setObjectUrl(null);
     setPreview(null);
     onFileChange(null);
     if (initialUrl) onRemoveExisting?.();
@@ -46,11 +60,11 @@ export function PhotoUpload({ initialUrl, onFileChange, onRemoveExisting }: Phot
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex aspect-video w-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-muted-foreground/50"
+          className="flex aspect-video w-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-muted-foreground/50 active:bg-muted/50"
         >
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Camera className="h-8 w-8" />
-            <span className="text-sm">Add photo</span>
+            <span className="text-sm">{t('wish_add_photo')}</span>
           </div>
         </button>
       )}

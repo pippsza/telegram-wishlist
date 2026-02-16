@@ -16,7 +16,7 @@ export function WishCard({ wish, variant, onClick }: WishCardProps) {
 
   return (
     <Card
-      className={`overflow-hidden cursor-pointer transition-shadow hover:shadow-md active:scale-[0.99] ${
+      className={`overflow-hidden cursor-pointer transition-all hover:shadow-md active:scale-[0.98] active:shadow-sm ${
         variant === 'archived' ? 'opacity-60' : ''
       }`}
       onClick={() => onClick?.(wish)}

@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Star, Users, Archive, Settings } from 'lucide-react';
+import { getPairs } from '@/api/pairs';
 import { useT } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
 
@@ -12,6 +14,13 @@ const tabs: { to: string; icon: typeof Star; key: TranslationKey }[] = [
 
 export function BottomNav() {
   const t = useT();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    getPairs()
+      .then((data) => setPendingCount(data.pendingReceived.length))
+      .catch(() => {});
+  }, []);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
@@ -22,7 +31,7 @@ export function BottomNav() {
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `relative flex flex-col items-center gap-0.5 px-3 py-2 text-[11px] font-medium transition-colors ${
+              `relative flex flex-col items-center gap-0.5 px-3 py-2 text-[11px] font-medium transition-colors active:opacity-70 ${
                 isActive ? 'text-primary' : 'text-muted-foreground'
               }`
             }
@@ -32,7 +41,14 @@ export function BottomNav() {
                 {isActive && (
                   <span className="absolute -top-[1px] left-3 right-3 h-0.5 rounded-b bg-primary" />
                 )}
-                <Icon className="h-5 w-5" />
+                <div className="relative">
+                  <Icon className="h-5 w-5" />
+                  {to === '/pairs' && pendingCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                      {pendingCount}
+                    </span>
+                  )}
+                </div>
                 <span>{t(key)}</span>
               </>
             )}

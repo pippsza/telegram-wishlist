@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { WishForm } from '@/components/wishes/WishForm';
 import { WishListSkeleton } from '@/components/shared/WishSkeleton';
-import { getMyWishes, updateWish } from '@/api/wishes';
+import { getWishById, updateWish } from '@/api/wishes';
 import { useT } from '@/i18n';
 import type { Wish } from '@/types';
 
@@ -15,10 +15,10 @@ export function WishEditPage() {
 
   useEffect(() => {
     async function fetchWish() {
+      if (!id) return;
       try {
-        const data = await getMyWishes();
-        const found = data.wishes.find((w) => w._id === id);
-        if (found) setWish(found);
+        const data = await getWishById(id);
+        setWish(data.wish);
       } catch { /* */ } finally {
         setLoading(false);
       }

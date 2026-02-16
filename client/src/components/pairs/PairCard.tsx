@@ -14,7 +14,7 @@ export function PairCard({ pair }: PairCardProps) {
 
   return (
     <Card
-      className="cursor-pointer transition-colors hover:bg-accent"
+      className="cursor-pointer transition-all hover:bg-accent active:scale-[0.98]"
       onClick={() => navigate(`/pairs/${pair.id}`)}
     >
       <CardContent className="flex items-center gap-3 p-4">

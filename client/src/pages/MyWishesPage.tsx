@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Header } from '@/components/layout/Header';
 import { WishList } from '@/components/wishes/WishList';
-import { FilterBar } from '@/components/wishes/FilterBar';
+import { FilterBar, type SortOption } from '@/components/wishes/FilterBar';
 import { WishDetailModal } from '@/components/wishes/WishDetailModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { getMyWishes, getAllPartnerWishes, deleteWish, markWishReceived, sendWishToChat } from '@/api/wishes';
@@ -23,10 +24,11 @@ export function MyWishesPage() {
   const [selectedWish, setSelectedWish] = useState<Wish | null>(null);
   const [tab, setTab] = useState('my');
 
-  // Filters
+  // Filters & sort
   const [search, setSearch] = useState('');
   const [priority, setPriority] = useState<WishPriority | 'all'>('all');
   const [selectedTag, setSelectedTag] = useState<string | 'all'>('all');
+  const [sort, setSort] = useState<SortOption>('newest');
 
   const fetchMyWishes = useCallback(async () => {
     try {
@@ -76,15 +78,25 @@ export function MyWishesPage() {
     if (selectedTag !== 'all') {
       result = result.filter((w) => w.tags.includes(selectedTag));
     }
-    return result;
-  }, [currentWishes, search, priority, selectedTag]);
+    const sorted = [...result];
+    if (sort === 'newest') {
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else if (sort === 'priority') {
+      const order = { high: 0, medium: 1, low: 2 };
+      sorted.sort((a, b) => order[a.priority] - order[b.priority]);
+    } else if (sort === 'alpha') {
+      sorted.sort((a, b) => a.description.localeCompare(b.description));
+    }
+    return sorted;
+  }, [currentWishes, search, priority, selectedTag, sort]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await deleteWish(deleteId);
       setMyWishes((prev) => prev.filter((w) => w._id !== deleteId));
-    } catch (err) { console.error('Delete wish error:', err); }
+      toast.success(t('toast_wish_deleted'));
+    } catch { toast.error(t('toast_error')); }
   };
 
   const handleReceive = async (id: string) => {
@@ -92,13 +104,15 @@ export function MyWishesPage() {
       await markWishReceived(id);
       setMyWishes((prev) => prev.filter((w) => w._id !== id));
       setPartnerWishes((prev) => prev.filter((w) => w._id !== id));
-    } catch (err) { console.error('Mark received error:', err); }
+      toast.success(t('toast_wish_received'));
+    } catch { toast.error(t('toast_error')); }
   };
 
   const handleSendToChat = async (wish: Wish) => {
     try {
       await sendWishToChat(wish._id);
-    } catch (err) { console.error('Send to chat error:', err); }
+      toast.success(t('toast_sent_to_chat'));
+    } catch { toast.error(t('toast_error')); }
   };
 
   return (
@@ -119,6 +133,8 @@ export function MyWishesPage() {
           tags={allTags}
           selectedTag={selectedTag}
           onTagChange={setSelectedTag}
+          sort={sort}
+          onSortChange={setSort}
         />
 
         <TabsContent value="my" className="mt-0">

@@ -62,10 +62,18 @@ async function notifyPartners(userId: string, wish: { description: string; photo
     const name = user.firstName + (user.username ? ` (@${user.username})` : '');
     const tagsStr = wish.tags.length ? `\n${wish.tags.map((t) => `#${t}`).join(' ')}` : '';
     const linkStr = wish.link ? `\n🔗 ${wish.link}` : '';
-    const caption = `🎁 *${name}* добавил(а) в вишлист:\n\n${priorityEmoji[wish.priority] || '🟡'} ${wish.description}${linkStr}${tagsStr}`;
 
     for (const partner of partners) {
       try {
+        const lang = partner.languageCode || 'en';
+        const captions: Record<string, string> = {
+          ru: `🎁 *${name}* добавил(а) в вишлист:`,
+          uk: `🎁 *${name}* додав(-ла) у вішліст:`,
+          en: `🎁 *${name}* added to wishlist:`,
+        };
+        const captionPrefix = captions[lang] || captions.en;
+        const caption = `${captionPrefix}\n\n${priorityEmoji[wish.priority] || '🟡'} ${wish.description}${linkStr}${tagsStr}`;
+
         if (wish.photoPath) {
           const photoFilePath = path.join(__dirname, '../../uploads', wish.photoPath);
           try {
@@ -191,6 +199,21 @@ router.get('/partner/:pairId', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Partner pair wishes error:', error);
     res.status(500).json({ error: 'Failed to fetch partner wishes' });
+  }
+});
+
+// Get single wish by ID
+router.get('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const wish = await Wish.findOne({ _id: req.params.id, owner: req.userId });
+    if (!wish) {
+      res.status(404).json({ error: 'Wish not found' });
+      return;
+    }
+    res.json({ wish });
+  } catch (error) {
+    console.error('Fetch wish error:', error);
+    res.status(500).json({ error: 'Failed to fetch wish' });
   }
 });
 
@@ -331,6 +354,32 @@ router.patch('/:id/receive', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Unarchive wish (set back to active)
+router.patch('/:id/unarchive', async (req: AuthRequest, res: Response) => {
+  try {
+    const wish = await Wish.findById(req.params.id);
+    if (!wish) {
+      res.status(404).json({ error: 'Wish not found' });
+      return;
+    }
+
+    if (wish.owner.toString() !== req.userId) {
+      res.status(403).json({ error: 'Not authorized' });
+      return;
+    }
+
+    wish.status = 'active';
+    wish.receivedAt = undefined;
+    wish.receivedBy = undefined;
+    await wish.save();
+
+    res.json({ wish });
+  } catch (error) {
+    console.error('Unarchive error:', error);
+    res.status(500).json({ error: 'Failed to unarchive wish' });
+  }
+});
+
 // Send wish to chat via bot
 router.post('/:id/send-to-chat', async (req: AuthRequest, res: Response) => {
   try {
@@ -347,7 +396,10 @@ router.post('/:id/send-to-chat', async (req: AuthRequest, res: Response) => {
     }
 
     const priorityEmoji: Record<string, string> = { high: '🔴', medium: '🟡', low: '🔵' };
-    const tagsStr = wish.tags.length ? `\nТеги: ${wish.tags.map((t: string) => `#${t}`).join(' ')}` : '';
+    const lang = user.languageCode || 'en';
+    const tagsLabels: Record<string, string> = { ru: 'Теги', uk: 'Теги', en: 'Tags' };
+    const tagsLabel = tagsLabels[lang] || tagsLabels.en;
+    const tagsStr = wish.tags.length ? `\n${tagsLabel}: ${wish.tags.map((t: string) => `#${t}`).join(' ')}` : '';
     const linkStr = wish.link ? `\n🔗 ${wish.link}` : '';
     const text = `${priorityEmoji[wish.priority] || '🟡'} *Wish*\n\n${wish.description}${linkStr}${tagsStr}`;
 

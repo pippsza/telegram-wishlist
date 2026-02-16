@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Header } from '@/components/layout/Header';
 import { WishList } from '@/components/wishes/WishList';
-import { FilterBar } from '@/components/wishes/FilterBar';
+import { FilterBar, type SortOption } from '@/components/wishes/FilterBar';
 import { WishDetailModal } from '@/components/wishes/WishDetailModal';
-import { getArchiveAll, sendWishToChat } from '@/api/wishes';
+import { getArchiveAll, sendWishToChat, unarchiveWish } from '@/api/wishes';
 import { useT } from '@/i18n';
 import type { Wish, WishPriority } from '@/types';
 
@@ -18,6 +19,7 @@ export function ArchivePage() {
   const [search, setSearch] = useState('');
   const [priority, setPriority] = useState<WishPriority | 'all'>('all');
   const [selectedTag, setSelectedTag] = useState<string | 'all'>('all');
+  const [sort, setSort] = useState<SortOption>('newest');
 
   const fetchArchive = useCallback(async () => {
     try {
@@ -49,11 +51,26 @@ export function ArchivePage() {
     }
     if (priority !== 'all') result = result.filter((w) => w.priority === priority);
     if (selectedTag !== 'all') result = result.filter((w) => w.tags.includes(selectedTag));
-    return result;
-  }, [currentWishes, search, priority, selectedTag]);
+    const sorted = [...result];
+    if (sort === 'newest') sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    else if (sort === 'priority') { const o = { high: 0, medium: 1, low: 2 }; sorted.sort((a, b) => o[a.priority] - o[b.priority]); }
+    else if (sort === 'alpha') sorted.sort((a, b) => a.description.localeCompare(b.description));
+    return sorted;
+  }, [currentWishes, search, priority, selectedTag, sort]);
 
   const handleSendToChat = async (wish: Wish) => {
-    try { await sendWishToChat(wish._id); } catch (err) { console.error('Send to chat error:', err); }
+    try {
+      await sendWishToChat(wish._id);
+      toast.success(t('toast_sent_to_chat'));
+    } catch { toast.error(t('toast_error')); }
+  };
+
+  const handleUnarchive = async (id: string) => {
+    try {
+      await unarchiveWish(id);
+      setOwn((prev) => prev.filter((w) => w._id !== id));
+      toast.success(t('toast_wish_unarchived'));
+    } catch { toast.error(t('toast_error')); }
   };
 
   return (
@@ -64,7 +81,7 @@ export function ArchivePage() {
           <TabsTrigger value="own">{t('archive_my_wishes')}</TabsTrigger>
           <TabsTrigger value="partners">{t('archive_from_partners')}</TabsTrigger>
         </TabsList>
-        <FilterBar search={search} onSearchChange={setSearch} priority={priority} onPriorityChange={setPriority} tags={allTags} selectedTag={selectedTag} onTagChange={setSelectedTag} />
+        <FilterBar search={search} onSearchChange={setSearch} priority={priority} onPriorityChange={setPriority} tags={allTags} selectedTag={selectedTag} onTagChange={setSelectedTag} sort={sort} onSortChange={setSort} />
         <TabsContent value="own" className="mt-0">
           <WishList wishes={filtered} loading={loading} variant="archived" emptyMessage={t('no_archive')} onWishClick={setSelectedWish} />
         </TabsContent>
@@ -72,7 +89,7 @@ export function ArchivePage() {
           <WishList wishes={filtered} loading={loading} variant="archived" emptyMessage={t('no_archive')} onWishClick={setSelectedWish} />
         </TabsContent>
       </Tabs>
-      <WishDetailModal wish={selectedWish} open={!!selectedWish} onOpenChange={(open) => !open && setSelectedWish(null)} variant="archived" onSendToChat={handleSendToChat} />
+      <WishDetailModal wish={selectedWish} open={!!selectedWish} onOpenChange={(open) => !open && setSelectedWish(null)} variant="archived" onSendToChat={handleSendToChat} onUnarchive={tab === 'own' ? handleUnarchive : undefined} />
     </>
   );
 }

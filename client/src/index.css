@@ -48,6 +48,7 @@ html.tg-theme {
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -83,6 +84,7 @@ html.tg-theme {
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -117,6 +119,7 @@ html.tg-theme {
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -152,6 +155,7 @@ html.tg-theme {
   --accent: #fce4ec;
   --accent-foreground: #6d2045;
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: #ffffff;
   --border: #f8c8d8;
   --input: #f8c8d8;
   --ring: #e8578a;
@@ -174,9 +178,26 @@ html.tg-theme {
   --accent: #e8f5e9;
   --accent-foreground: #2e5a32;
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: #ffffff;
   --border: #c8e6c9;
   --input: #c8e6c9;
   --ring: #4caf50;
+}
+
+/* Animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.25s ease-out both;
 }
 
 @layer base {

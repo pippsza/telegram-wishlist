@@ -32,13 +32,18 @@ export function WishList({
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      {wishes.map((wish) => (
-        <WishCard
+      {wishes.map((wish, i) => (
+        <div
           key={wish._id}
-          wish={wish}
-          variant={variant}
-          onClick={onWishClick}
-        />
+          className="animate-fade-in-up"
+          style={{ animationDelay: `${i * 40}ms` }}
+        >
+          <WishCard
+            wish={wish}
+            variant={variant}
+            onClick={onWishClick}
+          />
+        </div>
       ))}
     </div>
   );

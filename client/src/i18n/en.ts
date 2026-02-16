@@ -30,6 +30,7 @@ export const en = {
   wish_mark_received: 'Mark as received',
   wish_received_date: 'Received',
   wish_send_to_chat: 'Send to chat',
+  wish_unarchive: 'Restore',
   wish_not_found: 'Wish not found',
 
   // Priority
@@ -92,6 +93,33 @@ export const en = {
 
   // Link label
   link: 'Link',
+
+  // Toast messages
+  toast_wish_created: 'Wish created!',
+  toast_wish_updated: 'Wish updated!',
+  toast_wish_deleted: 'Wish deleted',
+  toast_wish_received: 'Marked as received',
+  toast_wish_unarchived: 'Wish restored',
+  toast_sent_to_chat: 'Sent to chat',
+  toast_pair_request_sent: 'Request sent',
+  toast_pair_accepted: 'Pair created!',
+  toast_pair_declined: 'Request declined',
+  toast_pair_deleted: 'Pair deleted',
+  toast_link_copied: 'Link copied',
+  toast_error: 'Something went wrong',
+  toast_logged_out: 'Logged out',
+
+  // New features
+  logout: 'Log out',
+  pending_sent: 'Sent requests',
+  pending_sent_link: 'Invite link',
+  pending_sent_username: 'Request to user',
+  delete_pair: 'Delete pair',
+  delete_pair_title: 'Delete pair',
+  delete_pair_description: 'Are you sure you want to remove this partner?',
+  sort_newest: 'Newest',
+  sort_priority: 'By priority',
+  sort_alpha: 'A-Z',
 } as const;
 
 export type TranslationKey = keyof typeof en;

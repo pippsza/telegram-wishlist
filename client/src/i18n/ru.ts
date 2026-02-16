@@ -29,6 +29,7 @@ export const ru: Record<TranslationKey, string> = {
   wish_mark_received: 'Получено',
   wish_received_date: 'Получено',
   wish_send_to_chat: 'Отправить в чат',
+  wish_unarchive: 'Восстановить',
   wish_not_found: 'Желание не найдено',
 
   priority_high: 'Высокий',
@@ -82,4 +83,29 @@ export const ru: Record<TranslationKey, string> = {
   open_from_telegram: 'Откройте приложение из Telegram.',
 
   link: 'Ссылка',
+
+  toast_wish_created: 'Желание создано!',
+  toast_wish_updated: 'Желание обновлено!',
+  toast_wish_deleted: 'Желание удалено',
+  toast_wish_received: 'Отмечено как полученное',
+  toast_wish_unarchived: 'Желание восстановлено',
+  toast_sent_to_chat: 'Отправлено в чат',
+  toast_pair_request_sent: 'Запрос отправлен',
+  toast_pair_accepted: 'Пара создана!',
+  toast_pair_declined: 'Запрос отклонён',
+  toast_pair_deleted: 'Пара удалена',
+  toast_link_copied: 'Ссылка скопирована',
+  toast_error: 'Что-то пошло не так',
+  toast_logged_out: 'Вы вышли',
+
+  logout: 'Выйти',
+  pending_sent: 'Отправленные запросы',
+  pending_sent_link: 'Ссылка-приглашение',
+  pending_sent_username: 'Запрос пользователю',
+  delete_pair: 'Удалить пару',
+  delete_pair_title: 'Удалить пару',
+  delete_pair_description: 'Ты уверен, что хочешь удалить этого партнёра?',
+  sort_newest: 'Новые',
+  sort_priority: 'По приоритету',
+  sort_alpha: 'А-Я',
 };

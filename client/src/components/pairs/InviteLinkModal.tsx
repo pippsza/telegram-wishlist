@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ export function InviteLinkModal() {
     try {
       const data = await createInvite();
       setInviteCode(data.inviteCode);
-    } catch { /* */ } finally {
+    } catch { toast.error(t('toast_error')); } finally {
       setLoading(false);
     }
   };
@@ -29,6 +30,7 @@ export function InviteLinkModal() {
   const copyLink = async () => {
     await navigator.clipboard.writeText(inviteLink);
     setCopied(true);
+    toast.success(t('toast_link_copied'));
     setTimeout(() => setCopied(false), 2000);
   };
 

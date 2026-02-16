@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Header } from '@/components/layout/Header';
 import { WishList } from '@/components/wishes/WishList';
-import { FilterBar } from '@/components/wishes/FilterBar';
+import { FilterBar, type SortOption } from '@/components/wishes/FilterBar';
 import { WishDetailModal } from '@/components/wishes/WishDetailModal';
 import { getPartnerWishes, markWishReceived, sendWishToChat } from '@/api/wishes';
 import { useT } from '@/i18n';
@@ -17,6 +18,7 @@ export function PairDetailPage() {
   const [search, setSearch] = useState('');
   const [priority, setPriority] = useState<WishPriority | 'all'>('all');
   const [selectedTag, setSelectedTag] = useState<string | 'all'>('all');
+  const [sort, setSort] = useState<SortOption>('newest');
 
   const fetchWishes = useCallback(async () => {
     if (!id) return;
@@ -44,24 +46,32 @@ export function PairDetailPage() {
     }
     if (priority !== 'all') result = result.filter((w) => w.priority === priority);
     if (selectedTag !== 'all') result = result.filter((w) => w.tags.includes(selectedTag));
-    return result;
-  }, [wishes, search, priority, selectedTag]);
+    const sorted = [...result];
+    if (sort === 'newest') sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    else if (sort === 'priority') { const o = { high: 0, medium: 1, low: 2 }; sorted.sort((a, b) => o[a.priority] - o[b.priority]); }
+    else if (sort === 'alpha') sorted.sort((a, b) => a.description.localeCompare(b.description));
+    return sorted;
+  }, [wishes, search, priority, selectedTag, sort]);
 
   const handleReceive = async (wishId: string) => {
     try {
       await markWishReceived(wishId);
       setWishes((prev) => prev.filter((w) => w._id !== wishId));
-    } catch { /* */ }
+      toast.success(t('toast_wish_received'));
+    } catch { toast.error(t('toast_error')); }
   };
 
   const handleSendToChat = async (wish: Wish) => {
-    try { await sendWishToChat(wish._id); } catch { /* */ }
+    try {
+      await sendWishToChat(wish._id);
+      toast.success(t('toast_sent_to_chat'));
+    } catch { toast.error(t('toast_error')); }
   };
 
   return (
     <>
       <Header title={t('partner_wishes')} />
-      <FilterBar search={search} onSearchChange={setSearch} priority={priority} onPriorityChange={setPriority} tags={allTags} selectedTag={selectedTag} onTagChange={setSelectedTag} />
+      <FilterBar search={search} onSearchChange={setSearch} priority={priority} onPriorityChange={setPriority} tags={allTags} selectedTag={selectedTag} onTagChange={setSelectedTag} sort={sort} onSortChange={setSort} />
       <WishList wishes={filtered} loading={loading} variant="partner" emptyMessage={t('no_partner_wishes')} onWishClick={setSelectedWish} />
       <WishDetailModal wish={selectedWish} open={!!selectedWish} onOpenChange={(open) => !open && setSelectedWish(null)} variant="partner" onReceive={handleReceive} onSendToChat={handleSendToChat} />
     </>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,8 +48,11 @@ export function WishForm({ initialData, onSubmit }: WishFormProps) {
       if (photo) formData.append('photo', photo);
       if (removePhoto) formData.append('removePhoto', 'true');
       await onSubmit(formData);
+      toast.success(initialData ? t('toast_wish_updated') : t('toast_wish_created'));
       navigate(-1);
-    } catch { /* */ } finally {
+    } catch {
+      toast.error(t('toast_error'));
+    } finally {
       setSubmitting(false);
     }
   };
@@ -90,7 +94,7 @@ export function WishForm({ initialData, onSubmit }: WishFormProps) {
             {tags.map((tag) => (
               <Badge key={tag} variant="secondary" className="gap-1">
                 {tag}
-                <button type="button" onClick={() => setTags(tags.filter((tt) => tt !== tag))}><X className="h-3 w-3" /></button>
+                <button type="button" onClick={() => setTags(tags.filter((tt) => tt !== tag))} className="rounded-full p-0.5 transition-colors hover:bg-destructive/20 hover:text-destructive"><X className="h-3 w-3" /></button>
               </Badge>
             ))}
           </div>

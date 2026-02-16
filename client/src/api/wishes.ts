@@ -13,6 +13,11 @@ export async function getMyWishes(params?: Record<string, string>): Promise<Wish
   return data;
 }
 
+export async function getWishById(id: string): Promise<{ wish: Wish }> {
+  const { data } = await api.get<{ wish: Wish }>(`/wishes/${id}`);
+  return data;
+}
+
 export async function getPartnerWishes(pairId: string): Promise<{ wishes: Wish[] }> {
   const { data } = await api.get<{ wishes: Wish[] }>(`/wishes/partner/${pairId}`);
   return data;
@@ -53,6 +58,11 @@ export async function deleteWish(id: string): Promise<void> {
 
 export async function markWishReceived(id: string): Promise<{ wish: Wish }> {
   const { data } = await api.patch<{ wish: Wish }>(`/wishes/${id}/receive`);
+  return data;
+}
+
+export async function unarchiveWish(id: string): Promise<{ wish: Wish }> {
+  const { data } = await api.patch<{ wish: Wish }>(`/wishes/${id}/unarchive`);
   return data;
 }
 

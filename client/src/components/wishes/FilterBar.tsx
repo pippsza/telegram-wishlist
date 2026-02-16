@@ -13,6 +13,8 @@ import { useT } from '@/i18n';
 import type { WishPriority } from '@/types';
 import { useState } from 'react';
 
+export type SortOption = 'newest' | 'priority' | 'alpha';
+
 interface FilterBarProps {
   search: string;
   onSearchChange: (v: string) => void;
@@ -21,6 +23,8 @@ interface FilterBarProps {
   tags: string[];
   selectedTag: string | 'all';
   onTagChange: (v: string | 'all') => void;
+  sort?: SortOption;
+  onSortChange?: (v: SortOption) => void;
 }
 
 export function FilterBar({
@@ -31,6 +35,8 @@ export function FilterBar({
   tags,
   selectedTag,
   onTagChange,
+  sort,
+  onSortChange,
 }: FilterBarProps) {
   const t = useT();
   const [showFilters, setShowFilters] = useState(false);
@@ -58,23 +64,38 @@ export function FilterBar({
 
       {showFilters && (
         <div className="flex flex-col gap-2">
-          <Select value={priority} onValueChange={(v) => onPriorityChange(v as WishPriority | 'all')}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={t('filter_priority')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('filter_all')}</SelectItem>
-              <SelectItem value="high">{t('priority_high')}</SelectItem>
-              <SelectItem value="medium">{t('priority_medium')}</SelectItem>
-              <SelectItem value="low">{t('priority_low')}</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={priority} onValueChange={(v) => onPriorityChange(v as WishPriority | 'all')}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder={t('filter_priority')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filter_all')}</SelectItem>
+                <SelectItem value="high">{t('priority_high')}</SelectItem>
+                <SelectItem value="medium">{t('priority_medium')}</SelectItem>
+                <SelectItem value="low">{t('priority_low')}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {sort !== undefined && onSortChange && (
+              <Select value={sort} onValueChange={(v) => onSortChange(v as SortOption)}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">{t('sort_newest')}</SelectItem>
+                  <SelectItem value="priority">{t('sort_priority')}</SelectItem>
+                  <SelectItem value="alpha">{t('sort_alpha')}</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
 
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               <Badge
                 variant={selectedTag === 'all' ? 'default' : 'outline'}
-                className="cursor-pointer"
+                className="cursor-pointer transition-colors hover:bg-primary/80 hover:text-primary-foreground"
                 onClick={() => onTagChange('all')}
               >
                 {t('filter_all')}
@@ -83,7 +104,7 @@ export function FilterBar({
                 <Badge
                   key={tag}
                   variant={selectedTag === tag ? 'default' : 'outline'}
-                  className="cursor-pointer"
+                  className="cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
                   onClick={() => onTagChange(tag)}
                 >
                   {tag}

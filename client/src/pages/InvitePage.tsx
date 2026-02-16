@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserPlus, Loader2 } from 'lucide-react';
@@ -21,6 +22,7 @@ export function InvitePage() {
     try {
       await acceptInvite(code);
       setSuccess(true);
+      toast.success(t('toast_pair_accepted'));
       setTimeout(() => navigate('/pairs'), 1500);
     } catch (err: unknown) {
       const message = err && typeof err === 'object' && 'response' in err

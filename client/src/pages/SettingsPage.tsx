@@ -1,5 +1,8 @@
+import { toast } from 'sonner';
+import { LogOut } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -8,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useAuth } from '@/context/AuthContext';
 import { useSettings, useT, type Locale, type Theme } from '@/i18n';
 
 const languages: { value: Locale; label: string }[] = [
@@ -24,8 +28,14 @@ const themes: { value: Theme; key: 'theme_light' | 'theme_dark' | 'theme_pink' |
 ];
 
 export function SettingsPage() {
+  const { logout } = useAuth();
   const { locale, setLocale, theme, setTheme } = useSettings();
   const t = useT();
+
+  const handleLogout = () => {
+    logout();
+    toast.success(t('toast_logged_out'));
+  };
 
   return (
     <>
@@ -70,6 +80,11 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Button variant="outline" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          {t('logout')}
+        </Button>
       </div>
     </>
   );
