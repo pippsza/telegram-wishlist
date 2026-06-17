@@ -7,10 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Plus, Trash2 } from 'lucide-react';
 import { PhotoUpload } from './PhotoUpload';
 import { useT } from '@/i18n';
-import type { Wish, WishPriority } from '@/types';
+import type { Wish, WishPriority, WishOption } from '@/types';
 
 interface WishFormProps {
   initialData?: Wish;
@@ -25,6 +25,7 @@ export function WishForm({ initialData, onSubmit }: WishFormProps) {
   const [priority, setPriority] = useState<WishPriority>(initialData?.priority ?? 'medium');
   const [tags, setTags] = useState<string[]>(initialData?.tags ?? []);
   const [tagInput, setTagInput] = useState('');
+  const [options, setOptions] = useState<WishOption[]>(initialData?.options ?? []);
   const [photo, setPhoto] = useState<File | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -34,6 +35,11 @@ export function WishForm({ initialData, onSubmit }: WishFormProps) {
     if (tag && !tags.includes(tag)) setTags([...tags, tag]);
     setTagInput('');
   };
+
+  const addOption = () => setOptions([...options, { label: '', link: '', price: '' }]);
+  const updateOption = (i: number, field: keyof WishOption, value: string) =>
+    setOptions(options.map((o, idx) => (idx === i ? { ...o, [field]: value } : o)));
+  const removeOption = (i: number) => setOptions(options.filter((_, idx) => idx !== i));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +51,7 @@ export function WishForm({ initialData, onSubmit }: WishFormProps) {
       formData.append('link', link.trim());
       formData.append('priority', priority);
       formData.append('tags', JSON.stringify(tags));
+      formData.append('options', JSON.stringify(options.filter((o) => o.label.trim())));
       if (photo) formData.append('photo', photo);
       if (removePhoto) formData.append('removePhoto', 'true');
       await onSubmit(formData);
@@ -100,6 +107,32 @@ export function WishForm({ initialData, onSubmit }: WishFormProps) {
           </div>
         )}
       </div>
+      <div className="space-y-2">
+        <Label>{t('wish_options')}</Label>
+        <p className="text-xs text-muted-foreground">{t('wish_options_hint')}</p>
+        {options.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {options.map((opt, i) => (
+              <div key={i} className="flex flex-col gap-1.5 rounded-md border border-border p-2">
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-xs font-medium text-muted-foreground">{t('wish_or')}</span>
+                  <Input value={opt.label} onChange={(e) => updateOption(i, 'label', e.target.value)} placeholder={t('wish_option_label_placeholder')} />
+                  <button type="button" onClick={() => removeOption(i)} className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                </div>
+                <div className="flex gap-2 pl-7">
+                  <Input value={opt.price ?? ''} onChange={(e) => updateOption(i, 'price', e.target.value)} placeholder={t('wish_option_price_placeholder')} className="w-32" />
+                  <Input type="url" value={opt.link ?? ''} onChange={(e) => updateOption(i, 'link', e.target.value)} placeholder={t('wish_link_placeholder')} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button type="button" variant="outline" size="sm" onClick={addOption} className="gap-1.5">
+          <Plus className="h-4 w-4" />
+          {t('wish_add_option')}
+        </Button>
+      </div>
+
       <Button type="submit" disabled={submitting || !description.trim()} className="mt-2">
         {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {initialData ? t('wish_save') : t('wish_create')}

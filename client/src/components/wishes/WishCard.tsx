@@ -40,6 +40,17 @@ export function WishCard({ wish, variant, onClick }: WishCardProps) {
 
         <p className="text-sm line-clamp-2">{wish.description}</p>
 
+        {wish.options && wish.options.length > 0 && (
+          <ul className="mt-1.5 space-y-0.5">
+            {wish.options.map((opt, i) => (
+              <li key={i} className="flex items-baseline gap-1.5 text-xs text-muted-foreground">
+                <span className="shrink-0 text-[10px] uppercase text-primary/70">{t('wish_or')}</span>
+                <span className="truncate">{opt.label}{opt.price ? ` - ${opt.price}` : ''}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
         {wish.link && (
           <span className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary">
             <ExternalLink className="h-3 w-3" />

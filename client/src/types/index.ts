@@ -31,6 +31,12 @@ export interface PendingSent {
 export type WishPriority = 'high' | 'medium' | 'low';
 export type WishStatus = 'active' | 'received';
 
+export interface WishOption {
+  label: string;
+  link?: string;
+  price?: string;
+}
+
 export interface Wish {
   _id: string;
   owner: string | User;
@@ -39,6 +45,7 @@ export interface Wish {
   photoPath?: string;
   priority: WishPriority;
   tags: string[];
+  options?: WishOption[];
   status: WishStatus;
   receivedAt?: string;
   receivedBy?: string | User;

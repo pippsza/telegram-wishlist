@@ -62,6 +62,29 @@ export function WishDetailModal({
             </DialogTitle>
           </DialogHeader>
 
+          {wish.options && wish.options.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">{t('wish_options')}</p>
+              <ul className="space-y-1">
+                {wish.options.map((opt, i) => (
+                  <li key={i} className="flex items-baseline gap-2 text-sm">
+                    <span className="shrink-0 text-[10px] uppercase text-primary/70">{t('wish_or')}</span>
+                    <span className="flex-1">
+                      <span className="font-medium">{opt.label}</span>
+                      {opt.price && <span className="text-muted-foreground"> - {opt.price}</span>}
+                      {opt.link && (
+                        <a href={opt.link} target="_blank" rel="noopener noreferrer" className="ml-1.5 inline-flex items-center gap-0.5 text-primary hover:underline">
+                          <ExternalLink className="h-3 w-3" />
+                          {t('link')}
+                        </a>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {wish.link && (
             <a
               href={wish.link}

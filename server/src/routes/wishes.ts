@@ -14,6 +14,43 @@ router.use(authMiddleware);
 
 const TG_API = `https://api.telegram.org/bot${env.botToken}`;
 
+type WishOptionInput = { label: string; link?: string; price?: string };
+
+// Parse the options[] array coming from the multipart form (JSON string), keep only valid entries.
+function parseOptions(raw: unknown): WishOptionInput[] {
+  if (!raw || typeof raw !== 'string') return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((o) => o && typeof o.label === 'string' && o.label.trim())
+      .map((o) => ({
+        label: String(o.label).trim().slice(0, 200),
+        link: o.link ? String(o.link).trim().slice(0, 1000) : undefined,
+        price: o.price ? String(o.price).trim().slice(0, 50) : undefined,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+// Render options as an "either/or" block for Telegram messages.
+const OPTIONS_HEADER: Record<string, string> = {
+  ru: 'Варианты (выбрать одно):',
+  uk: 'Варіанти (обрати одне):',
+  en: 'Options (choose one):',
+};
+function optionsText(options: WishOptionInput[] | undefined, lang = 'en'): string {
+  if (!options || options.length === 0) return '';
+  const header = OPTIONS_HEADER[lang] || OPTIONS_HEADER.en;
+  const lines = options.map((o) => {
+    const price = o.price ? ` - ${o.price}` : '';
+    const link = o.link ? ` (${o.link})` : '';
+    return `• ${o.label}${price}${link}`;
+  });
+  return `\n\n${header}\n${lines.join('\n')}`;
+}
+
 // Helper: get partner IDs from active pairs
 async function getPartnerIds(userId: string) {
   const pairs = await Pair.find({ status: 'active', $or: [{ userA: userId }, { userB: userId }] });
@@ -47,7 +84,7 @@ async function sendTgPhoto(chatId: number, photoFilePath: string, caption: strin
 }
 
 // Helper: notify all partners about a new wish (fire-and-forget)
-async function notifyPartners(userId: string, wish: { description: string; photoPath?: string; priority: string; tags: string[]; link?: string }) {
+async function notifyPartners(userId: string, wish: { description: string; photoPath?: string; priority: string; tags: string[]; link?: string; options?: WishOptionInput[] }) {
   try {
     const user = await User.findById(userId);
     if (!user) return;
@@ -72,7 +109,8 @@ async function notifyPartners(userId: string, wish: { description: string; photo
           en: `🎁 *${name}* added to wishlist:`,
         };
         const captionPrefix = captions[lang] || captions.en;
-        const caption = `${captionPrefix}\n\n${priorityEmoji[wish.priority] || '🟡'} ${wish.description}${linkStr}${tagsStr}`;
+        const optionsStr = optionsText(wish.options, lang);
+        const caption = `${captionPrefix}\n\n${priorityEmoji[wish.priority] || '🟡'} ${wish.description}${optionsStr}${linkStr}${tagsStr}`;
 
         if (wish.photoPath) {
           const photoFilePath = path.join(__dirname, '../../uploads', wish.photoPath);
@@ -225,6 +263,7 @@ router.post('/', upload.single('photo'), async (req: AuthRequest, res: Response)
       res.status(400).json({ error: 'Description is required' });
       return;
     }
+    const parsedOptions = parseOptions(req.body.options);
 
     let photoPath: string | undefined;
     if (req.file) {
@@ -246,12 +285,13 @@ router.post('/', upload.single('photo'), async (req: AuthRequest, res: Response)
       photoPath,
       priority: priority || 'medium',
       tags: parsedTags,
+      options: parsedOptions,
     });
 
     res.status(201).json({ wish });
 
     // Notify partners asynchronously (don't block response)
-    notifyPartners(req.userId!, { description, photoPath, priority: priority || 'medium', tags: parsedTags, link });
+    notifyPartners(req.userId!, { description, photoPath, priority: priority || 'medium', tags: parsedTags, link, options: parsedOptions });
   } catch (error) {
     console.error('Create wish error:', error);
     res.status(500).json({ error: 'Failed to create wish' });
@@ -272,6 +312,7 @@ router.put('/:id', upload.single('photo'), async (req: AuthRequest, res: Respons
     if (link !== undefined) wish.link = link || undefined;
     if (priority) wish.priority = priority;
     if (tags) wish.tags = JSON.parse(tags);
+    if (req.body.options !== undefined) wish.options = parseOptions(req.body.options);
 
     if (req.file) {
       if (wish.photoPath) {
@@ -401,7 +442,8 @@ router.post('/:id/send-to-chat', async (req: AuthRequest, res: Response) => {
     const tagsLabel = tagsLabels[lang] || tagsLabels.en;
     const tagsStr = wish.tags.length ? `\n${tagsLabel}: ${wish.tags.map((t: string) => `#${t}`).join(' ')}` : '';
     const linkStr = wish.link ? `\n🔗 ${wish.link}` : '';
-    const text = `${priorityEmoji[wish.priority] || '🟡'} *Wish*\n\n${wish.description}${linkStr}${tagsStr}`;
+    const optionsStr = optionsText(wish.options, lang);
+    const text = `${priorityEmoji[wish.priority] || '🟡'} *Wish*\n\n${wish.description}${optionsStr}${linkStr}${tagsStr}`;
 
     let tgResult: { ok: boolean; description?: string };
 
