@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Gift, ExternalLink, Check, Package, MoreVertical } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,41 +14,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { PhotoUpload } from '@/components/wishes/PhotoUpload';
-import {
-  listGiftIdeas,
-  createGiftIdea,
-  updateGiftIdea,
-  setGiftIdeaStatus,
-  deleteGiftIdea,
-} from '@/api/giftIdeas';
+import { listGiftIdeas, setGiftIdeaStatus, deleteGiftIdea } from '@/api/giftIdeas';
 import { getPairs } from '@/api/pairs';
 import { useT } from '@/i18n';
 import type { GiftIdea, GiftIdeaStatus, Pair } from '@/types';
-
-interface FormState {
-  id?: string;
-  title: string;
-  body: string;
-  link: string;
-  price: string;
-  pairId: string;
-  status: GiftIdeaStatus;
-  photoFile: File | null;
-  removePhoto: boolean;
-  existingPhotoPath?: string;
-}
-
-const emptyForm: FormState = {
-  title: '',
-  body: '',
-  link: '',
-  price: '',
-  pairId: '',
-  status: 'idea',
-  photoFile: null,
-  removePhoto: false,
-};
 
 function partnerLabel(p: Pair): string {
   return p.partner.firstName + (p.partner.username ? ` (@${p.partner.username})` : '');
@@ -65,13 +31,11 @@ function statusVariant(s: GiftIdeaStatus): 'default' | 'secondary' | 'outline' {
 
 export function GiftIdeasPage() {
   const t = useT();
+  const navigate = useNavigate();
   const [ideas, setIdeas] = useState<GiftIdea[]>([]);
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [filterPair, setFilterPair] = useState<string>('all');
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [submitting, setSubmitting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -102,62 +66,6 @@ export function GiftIdeasPage() {
     }
     return Array.from(map.entries());
   }, [ideas, filterPair]);
-
-  function openCreate() {
-    setForm({ ...emptyForm, pairId: pairs[0]?.id ?? '' });
-    setOpen(true);
-  }
-
-  function openEdit(idea: GiftIdea) {
-    setForm({
-      id: idea._id,
-      title: idea.title,
-      body: idea.body ?? '',
-      link: idea.link ?? '',
-      price: idea.price ?? '',
-      pairId: typeof idea.forPair === 'string' ? idea.forPair : idea.forPair._id,
-      status: idea.status,
-      photoFile: null,
-      removePhoto: false,
-      existingPhotoPath: idea.photoPath,
-    });
-    setOpen(true);
-  }
-
-  async function handleSubmit() {
-    if (!form.title.trim() || !form.pairId) {
-      toast.error(t('common_required_title_friend'));
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const fd = new FormData();
-      fd.set('title', form.title.trim());
-      if (form.body.trim()) fd.set('body', form.body.trim());
-      if (form.link.trim()) fd.set('link', form.link.trim());
-      if (form.price.trim()) fd.set('price', form.price.trim());
-      fd.set('pairId', form.pairId);
-      fd.set('status', form.status);
-      if (form.photoFile) fd.set('photo', form.photoFile);
-      if (form.removePhoto) fd.set('removePhoto', 'true');
-
-      if (form.id) {
-        const res = await updateGiftIdea(form.id, fd);
-        setIdeas((prev) => prev.map((i) => (i._id === form.id ? res.idea : i)));
-        toast.success(t('common_updated'));
-      } else {
-        const res = await createGiftIdea(fd);
-        setIdeas((prev) => [res.idea, ...prev]);
-        toast.success(t('common_added'));
-      }
-      setOpen(false);
-    } catch (err) {
-      console.error(err);
-      toast.error(t('common_failed_save'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   async function handleStatusChange(id: string, status: GiftIdeaStatus) {
     try {
@@ -210,18 +118,20 @@ export function GiftIdeasPage() {
           const pair = pairById.get(pairId);
           return (
             <div key={pairId} className="mb-5">
-              <h2 className="mb-2 text-sm font-medium text-muted-foreground">{t('gi_for')} {pair ? partnerLabel(pair) : ''}</h2>
+              <h2 className="mb-2 text-sm font-medium text-muted-foreground">
+                {t('gi_for')} {pair ? partnerLabel(pair) : ''}
+              </h2>
               <ul className="space-y-2">
                 {items.map((idea) => (
                   <Card
                     key={idea._id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => openEdit(idea)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(idea); } }}
-                    className="cursor-pointer p-3 transition-colors active:bg-muted/50"
+                    onClick={() => navigate(`/gift-ideas/${idea._id}/edit`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/gift-ideas/${idea._id}/edit`); } }}
+                    className="flex flex-col cursor-pointer gap-2 p-3 transition-colors active:bg-muted/50"
                   >
-                    <div className="flex gap-3">
+                    <div className="flex flex-row items-start gap-3">
                       {idea.photoPath && (
                         <img src={`/uploads/${idea.photoPath}`} alt="" className="h-16 w-16 flex-none rounded object-cover" />
                       )}
@@ -257,7 +167,7 @@ export function GiftIdeasPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuItem onClick={() => openEdit(idea)}>
+                          <DropdownMenuItem onClick={() => navigate(`/gift-ideas/${idea._id}/edit`)}>
                             <Pencil className="mr-2 h-4 w-4" /> {t('gi_edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(idea._id)}>
@@ -266,7 +176,7 @@ export function GiftIdeasPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="mt-2 flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant={idea.status === 'idea' ? 'default' : 'outline'} className="h-7 flex-1" onClick={() => handleStatusChange(idea._id, 'idea')}>
                         {t('gi_status_idea')}
                       </Button>
@@ -288,61 +198,14 @@ export function GiftIdeasPage() {
       <Button
         className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg"
         size="icon"
-        onClick={openCreate}
+        onClick={() => {
+          const pairParam = filterPair !== 'all' ? `?pairId=${filterPair}` : '';
+          navigate(`/gift-ideas/new${pairParam}`);
+        }}
         disabled={pairs.length === 0}
       >
         <Plus className="h-6 w-6" />
       </Button>
-
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{form.id ? t('gi_edit') : t('gi_new')}</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-3 p-1">
-            <PhotoUpload
-              initialUrl={form.existingPhotoPath ? `/uploads/${form.existingPhotoPath}` : undefined}
-              onFileChange={(f) => setForm({ ...form, photoFile: f, removePhoto: f === null && !!form.existingPhotoPath })}
-              onRemoveExisting={() => setForm({ ...form, removePhoto: true, existingPhotoPath: undefined })}
-            />
-            <div>
-              <Label htmlFor="gi-title">{t('cal_title_label')}</Label>
-              <Input id="gi-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            </div>
-            <div>
-              <Label htmlFor="gi-body">{t('gi_note')}</Label>
-              <Textarea id="gi-body" rows={3} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="gi-price">{t('gi_price')}</Label>
-                <Input id="gi-price" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-              </div>
-              <div>
-                <Label htmlFor="gi-link">{t('gi_link')}</Label>
-                <Input id="gi-link" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="https://..." />
-              </div>
-            </div>
-            <div>
-              <Label>{t('gi_for_label')}</Label>
-              <Select value={form.pairId} onValueChange={(v) => setForm({ ...form, pairId: v })}>
-                <SelectTrigger><SelectValue placeholder={t('gi_choose_friend')} /></SelectTrigger>
-                <SelectContent>
-                  {pairs.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{partnerLabel(p)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button onClick={handleSubmit} disabled={submitting} className="flex-1">
-                {form.id ? t('common_save') : t('common_add')}
-              </Button>
-              <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>{t('common_cancel')}</Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
 
       <ConfirmDialog
         open={!!deleteId}

@@ -17,7 +17,9 @@ import { InvitePage } from '@/pages/InvitePage';
 import { AdminPage } from '@/pages/AdminPage';
 import { NotesIndexPage } from '@/pages/NotesIndexPage';
 import { GiftIdeasPage } from '@/pages/GiftIdeasPage';
+import { GiftIdeaEditPage } from '@/pages/GiftIdeaEditPage';
 import { NoteEditorPage } from '@/pages/NoteEditorPage';
+import { EventEditPage } from '@/pages/EventEditPage';
 import { getStartParam } from '@/lib/telegram';
 
 const queryClient = new QueryClient();
@@ -88,8 +90,12 @@ function AppRoutes() {
         <Route path="/pairs/:id" element={<PairDetailPage />} />
         <Route path="/archive" element={<ArchivePage />} />
         <Route path="/gift-ideas" element={<GiftIdeasPage />} />
+        <Route path="/gift-ideas/new" element={<GiftIdeaEditPage />} />
+        <Route path="/gift-ideas/:id/edit" element={<GiftIdeaEditPage />} />
         <Route path="/notes" element={<NotesIndexPage />} />
         <Route path="/notes/:id" element={<NoteEditorPage />} />
+        <Route path="/calendar/new" element={<EventEditPage />} />
+        <Route path="/calendar/:id/edit" element={<EventEditPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminPage />} />
       </Route>

@@ -237,7 +237,7 @@ export function PairDetailPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate('/gift-ideas')}>
+                        <DropdownMenuItem onClick={() => navigate(`/gift-ideas/${idea._id}/edit`)}>
                           <Pencil className="mr-2 h-4 w-4" /> {t('gi_edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={() => setDeleteIdeaId(idea._id)}>
@@ -285,8 +285,8 @@ export function PairDetailPage() {
                   key={ev._id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => navigate(`/notes?tab=calendar&openEvent=${ev._id}`)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/notes?tab=calendar&openEvent=${ev._id}`); } }}
+                  onClick={() => navigate(`/calendar/${ev._id}/edit`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/calendar/${ev._id}/edit`); } }}
                   className="cursor-pointer px-3 py-2 transition-colors active:bg-muted/50"
                 >
                   <div className="flex items-start gap-3">
@@ -314,7 +314,7 @@ export function PairDetailPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem onClick={() => navigate(`/notes?tab=calendar&openEvent=${ev._id}`)}>
+                        <DropdownMenuItem onClick={() => navigate(`/calendar/${ev._id}/edit`)}>
                           <Pencil className="mr-2 h-4 w-4" /> {t('cal_edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={() => setDeleteEventId(ev._id)}>
@@ -330,7 +330,7 @@ export function PairDetailPage() {
           <Button
             className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg"
             size="icon"
-            onClick={() => navigate('/notes?tab=calendar')}
+            onClick={() => navigate(`/calendar/new?pairId=${id}`)}
           >
             <Plus className="h-6 w-6" />
           </Button>

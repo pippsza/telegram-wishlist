@@ -233,7 +233,7 @@ export function NotesPage({ embedded = false }: NotesPageProps = {}) {
                     setPath((prev) => [...prev, f]);
                   }
                 }}
-                className="flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors active:bg-muted/50"
+                className="flex flex-row cursor-pointer items-center gap-2 px-3 py-2 transition-colors active:bg-muted/50"
               >
                 <Folder className="h-4 w-4 flex-none text-amber-500" />
                 <span className="flex-1 truncate font-medium">{f.title}</span>
@@ -277,7 +277,7 @@ export function NotesPage({ embedded = false }: NotesPageProps = {}) {
                     navigate(`/notes/${d._id}`);
                   }
                 }}
-                className="flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors active:bg-muted/50"
+                className="flex flex-row cursor-pointer items-center gap-2 px-3 py-2 transition-colors active:bg-muted/50"
               >
                 <FileText className="h-4 w-4 flex-none text-blue-500" />
                 <div className="min-w-0 flex-1">

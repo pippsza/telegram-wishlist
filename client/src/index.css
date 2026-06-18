@@ -209,8 +209,10 @@ html.tg-theme {
   }
 }
 
-/* Tiptap collaboration cursor (partner's caret + label). */
-.collaboration-cursor__caret {
+/* Tiptap CollaborationCaret (v3.27+, class "collaboration-carets__*"). Also
+   keeps the legacy CollaborationCursor classes alive for older builds. */
+.collaboration-cursor__caret,
+.collaboration-carets__caret {
   position: relative;
   margin-left: -1px;
   margin-right: -1px;
@@ -220,7 +222,8 @@ html.tg-theme {
   pointer-events: none;
 }
 
-.collaboration-cursor__label {
+.collaboration-cursor__label,
+.collaboration-carets__label {
   position: absolute;
   top: -1.4em;
   left: -1px;

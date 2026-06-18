@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Collaboration from '@tiptap/extension-collaboration';
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
+import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from 'tiptap-markdown';
@@ -103,7 +103,7 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
     extensions: [
       StarterKit.configure({ undoRedo: false }),
       Collaboration.configure({ document: ydoc }),
-      CollaborationCursor.configure({
+      CollaborationCaret.configure({
         provider,
         user: { name: userName, color: userColor || colorFromName(userName) },
       }),
