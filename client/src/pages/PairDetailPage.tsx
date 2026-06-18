@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Gift, ExternalLink, Plus, Pencil, Trash2, Check, Package } from 'lucide-react';
+import { format } from 'date-fns';
+import { Gift, ExternalLink, Plus, Pencil, Trash2, Check, Package, Calendar as CalendarIcon, RotateCw } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -13,8 +14,9 @@ import { WishDetailModal } from '@/components/wishes/WishDetailModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { getPartnerWishes, markWishReceived, sendWishToChat } from '@/api/wishes';
 import { listGiftIdeas, setGiftIdeaStatus, deleteGiftIdea } from '@/api/giftIdeas';
+import { listEvents, deleteEvent } from '@/api/calendar';
 import { useT } from '@/i18n';
-import type { Wish, WishPriority, GiftIdea, GiftIdeaStatus } from '@/types';
+import type { Wish, WishPriority, GiftIdea, GiftIdeaStatus, CalendarEvent } from '@/types';
 
 function statusVariant(s: GiftIdeaStatus): 'default' | 'secondary' | 'outline' {
   if (s === 'gifted') return 'default';
@@ -29,14 +31,17 @@ export function PairDetailPage() {
 
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [ideas, setIdeas] = useState<GiftIdea[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingIdeas, setLoadingIdeas] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(true);
   const [selectedWish, setSelectedWish] = useState<Wish | null>(null);
   const [search, setSearch] = useState('');
   const [priority, setPriority] = useState<WishPriority | 'all'>('all');
   const [selectedTag, setSelectedTag] = useState<string | 'all'>('all');
   const [sort, setSort] = useState<SortOption>('newest');
   const [deleteIdeaId, setDeleteIdeaId] = useState<string | null>(null);
+  const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
 
   const fetchWishes = useCallback(async () => {
     if (!id) return;
@@ -62,10 +67,27 @@ export function PairDetailPage() {
     }
   }, [id]);
 
+  const fetchEvents = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await listEvents();
+      const forThisPair = data.events.filter((ev) => {
+        const pairId = typeof ev.pair === 'string' ? ev.pair : ev.pair?._id;
+        return pairId === id;
+      });
+      setEvents(forThisPair);
+    } catch {
+      /* */
+    } finally {
+      setLoadingEvents(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchWishes();
     fetchIdeas();
-  }, [fetchWishes, fetchIdeas]);
+    fetchEvents();
+  }, [fetchWishes, fetchIdeas, fetchEvents]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -129,14 +151,42 @@ export function PairDetailPage() {
     }
   }
 
+  async function handleEventDelete() {
+    if (!deleteEventId) return;
+    try {
+      await deleteEvent(deleteEventId);
+      setEvents((prev) => prev.filter((e) => e._id !== deleteEventId));
+      toast.success(t('common_deleted'));
+    } catch {
+      toast.error(t('common_failed_delete'));
+    }
+  }
+
+  const sortedEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return [...events]
+      .map((ev) => {
+        const base = new Date(ev.date);
+        let when = base;
+        if (ev.isRecurringYearly) {
+          const cand = new Date(today.getFullYear(), base.getMonth(), base.getDate());
+          when = cand < today ? new Date(today.getFullYear() + 1, base.getMonth(), base.getDate()) : cand;
+        }
+        return { ev, when };
+      })
+      .sort((a, b) => a.when.getTime() - b.when.getTime());
+  }, [events]);
+
   return (
     <>
       <Header title={t('partner_wishes')} />
 
       <Tabs defaultValue="wishes" className="w-full">
-        <TabsList className="mx-4 mt-2 grid w-[calc(100%-2rem)] grid-cols-2">
+        <TabsList className="mx-4 mt-2 grid w-[calc(100%-2rem)] grid-cols-3">
           <TabsTrigger value="wishes">{t('partner_wishes')}</TabsTrigger>
           <TabsTrigger value="ideas">{t('gi_title')}</TabsTrigger>
+          <TabsTrigger value="dates">{t('cal_title')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="wishes" className="mt-0">
@@ -206,6 +256,52 @@ export function PairDetailPage() {
             <Plus className="h-6 w-6" />
           </Button>
         </TabsContent>
+
+        <TabsContent value="dates" className="mt-0">
+          <div className="px-4 pt-3">
+            {loadingEvents && <div className="text-sm text-muted-foreground">{t('common_loading')}</div>}
+            {!loadingEvents && sortedEvents.length === 0 && (
+              <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
+                <CalendarIcon className="mx-auto mb-3 h-8 w-8 opacity-40" />
+                {t('cal_empty')}
+              </div>
+            )}
+            <ul className="space-y-2">
+              {sortedEvents.map(({ ev, when }) => (
+                <Card key={ev._id} className="px-3 py-2">
+                  <div className="flex items-start gap-3">
+                    <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 text-center">
+                      <span className="text-[10px] uppercase text-muted-foreground">{format(when, 'MMM')}</span>
+                      <span className="text-lg font-semibold leading-tight">{format(when, 'd')}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-medium">{ev.title}</span>
+                        {ev.isRecurringYearly && <RotateCw className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                      {ev.note && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{ev.note}</p>}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => setDeleteEventId(ev._id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </ul>
+          </div>
+          <Button
+            className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg"
+            size="icon"
+            onClick={() => navigate('/notes?tab=calendar')}
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </TabsContent>
       </Tabs>
 
       <WishDetailModal wish={selectedWish} open={!!selectedWish} onOpenChange={(open) => !open && setSelectedWish(null)} variant="partner" onReceive={handleReceive} onSendToChat={handleSendToChat} />
@@ -217,6 +313,16 @@ export function PairDetailPage() {
         description={t('cal_delete_desc')}
         confirmLabel={t('common_delete')}
         onConfirm={handleIdeaDelete}
+        destructive
+      />
+
+      <ConfirmDialog
+        open={!!deleteEventId}
+        onOpenChange={(o) => !o && setDeleteEventId(null)}
+        title={t('cal_delete_title')}
+        description={t('cal_delete_desc')}
+        confirmLabel={t('common_delete')}
+        onConfirm={handleEventDelete}
         destructive
       />
     </>

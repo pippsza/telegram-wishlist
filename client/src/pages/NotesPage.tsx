@@ -37,7 +37,12 @@ function partnerLabel(p: Pair): string {
   return p.partner.firstName + (p.partner.username ? ` (@${p.partner.username})` : '');
 }
 
-export function NotesPage() {
+interface NotesPageProps {
+  // When embedded inside another page (NotesIndexPage), suppress our own Header.
+  embedded?: boolean;
+}
+
+export function NotesPage({ embedded = false }: NotesPageProps = {}) {
   const navigate = useNavigate();
   const t = useT();
   const [notes, setNotes] = useState<Note[]>([]);
@@ -138,7 +143,7 @@ export function NotesPage() {
 
   return (
     <>
-      <Header title={t('notes_title')} />
+      {!embedded && <Header title={t('notes_title')} />}
 
       <div className="px-4 pt-3">
         <Select

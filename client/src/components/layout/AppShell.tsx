@@ -2,7 +2,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BottomNav } from './BottomNav';
 import { EdgeSwipeBack } from '@/components/shared/EdgeSwipeBack';
 
-const ROOT_ROUTES = new Set(['/', '/notes', '/calendar', '/gift-ideas', '/pairs', '/archive', '/settings']);
+const ROOT_ROUTES = new Set(['/', '/notes', '/gift-ideas', '/pairs']);
 
 export function AppShell() {
   const navigate = useNavigate();

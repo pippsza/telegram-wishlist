@@ -53,7 +53,11 @@ function nextOccurrence(ev: CalendarEvent): Date {
   return candidate;
 }
 
-export function CalendarPage() {
+interface CalendarPageProps {
+  embedded?: boolean;
+}
+
+export function CalendarPage({ embedded = false }: CalendarPageProps = {}) {
   const t = useT();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [pairs, setPairs] = useState<Pair[]>([]);
@@ -198,7 +202,7 @@ export function CalendarPage() {
 
   return (
     <>
-      <Header title={t('cal_title')} />
+      {!embedded && <Header title={t('cal_title')} />}
 
       <div className="px-4 pt-4">
         {loading && <div className="text-sm text-muted-foreground">{t('common_loading')}</div>}

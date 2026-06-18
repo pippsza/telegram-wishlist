@@ -9,6 +9,7 @@ import { WishList } from '@/components/wishes/WishList';
 import { FilterBar, type SortOption } from '@/components/wishes/FilterBar';
 import { WishDetailModal } from '@/components/wishes/WishDetailModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { UpcomingDatesCard } from '@/components/shared/UpcomingDatesCard';
 import { getMyWishes, getAllPartnerWishes, deleteWish, markWishReceived, sendWishToChat } from '@/api/wishes';
 import { useT } from '@/i18n';
 import type { Wish, WishPriority } from '@/types';
@@ -118,6 +119,8 @@ export function MyWishesPage() {
   return (
     <>
       <Header title={t('my_wishes')} />
+
+      <UpcomingDatesCard />
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="mx-4 mt-2 grid w-[calc(100%-2rem)] grid-cols-2">

@@ -15,9 +15,8 @@ import { ArchivePage } from '@/pages/ArchivePage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { InvitePage } from '@/pages/InvitePage';
 import { AdminPage } from '@/pages/AdminPage';
-import { CalendarPage } from '@/pages/CalendarPage';
+import { NotesIndexPage } from '@/pages/NotesIndexPage';
 import { GiftIdeasPage } from '@/pages/GiftIdeasPage';
-import { NotesPage } from '@/pages/NotesPage';
 import { NoteEditorPage } from '@/pages/NoteEditorPage';
 import { getStartParam } from '@/lib/telegram';
 
@@ -88,9 +87,8 @@ function AppRoutes() {
         <Route path="/pairs" element={<PairsPage />} />
         <Route path="/pairs/:id" element={<PairDetailPage />} />
         <Route path="/archive" element={<ArchivePage />} />
-        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/gift-ideas" element={<GiftIdeasPage />} />
-        <Route path="/notes" element={<NotesPage />} />
+        <Route path="/notes" element={<NotesIndexPage />} />
         <Route path="/notes/:id" element={<NoteEditorPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminPage />} />
