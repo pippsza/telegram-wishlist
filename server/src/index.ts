@@ -23,11 +23,20 @@ import { userCanAccessNote } from './services/noteAccess';
 
 const app = express();
 
+// We sit behind nginx that forwards X-Forwarded-For. Trust one proxy hop so
+// req.ip (and the rate limiter) sees the real client address, not 172.19.0.3.
+app.set('trust proxy', 1);
+
 app.use(cors({ origin: env.clientUrl, credentials: true }));
 app.use(express.json());
 app.use(morgan('short'));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 app.use('/api', limiter);
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
