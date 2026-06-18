@@ -208,3 +208,76 @@ html.tg-theme {
     @apply bg-background text-foreground;
   }
 }
+
+/* Tiptap collaboration cursor (partner's caret + label). */
+.collaboration-cursor__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 1px solid;
+  border-right: 1px solid;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.collaboration-cursor__label {
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Tiptap editor content - basic prose styling without depending on @tailwindcss/typography. */
+.ProseMirror {
+  outline: none;
+  min-height: 100%;
+}
+.ProseMirror p {
+  margin: 0.4em 0;
+  line-height: 1.55;
+}
+.ProseMirror h1 { font-size: 1.6em; font-weight: 700; margin: 0.7em 0 0.3em; }
+.ProseMirror h2 { font-size: 1.3em; font-weight: 700; margin: 0.7em 0 0.3em; }
+.ProseMirror h3 { font-size: 1.1em; font-weight: 600; margin: 0.6em 0 0.3em; }
+.ProseMirror ul,
+.ProseMirror ol { padding-left: 1.25em; margin: 0.4em 0; }
+.ProseMirror li { margin: 0.15em 0; }
+.ProseMirror blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.75em;
+  color: var(--muted-foreground);
+  margin: 0.5em 0;
+}
+.ProseMirror code {
+  background: var(--muted);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.ProseMirror pre {
+  background: var(--muted);
+  padding: 0.7em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+.ProseMirror pre code { background: transparent; padding: 0; }
+.ProseMirror img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 0.4em 0;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

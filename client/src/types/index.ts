@@ -52,3 +52,54 @@ export interface Wish {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PairRef {
+  _id: string;
+  userA: string | User;
+  userB?: string | User;
+}
+
+export interface CalendarEvent {
+  _id: string;
+  owner: string | User;
+  pair: PairRef | string | null;
+  title: string;
+  date: string;
+  isRecurringYearly: boolean;
+  remindDaysBefore: number[];
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+  occurrence?: string;
+}
+
+export type GiftIdeaStatus = 'idea' | 'bought' | 'gifted';
+
+export interface GiftIdea {
+  _id: string;
+  owner: string;
+  forPair: PairRef | string;
+  title: string;
+  body?: string;
+  link?: string;
+  price?: string;
+  status: GiftIdeaStatus;
+  photoPath?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type NoteType = 'doc' | 'folder';
+
+export interface Note {
+  _id: string;
+  owner: string | User;
+  pair: string | null;
+  parent: string | null;
+  type: NoteType;
+  title: string;
+  plainText?: string;
+  lastEditedBy?: string | User;
+  createdAt: string;
+  updatedAt: string;
+}

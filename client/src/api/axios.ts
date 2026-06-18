@@ -10,6 +10,10 @@ export function setAuthToken(t: string | null) {
   token = t;
 }
 
+export function getAuthToken(): string | null {
+  return token;
+}
+
 api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

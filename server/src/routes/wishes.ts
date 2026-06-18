@@ -7,12 +7,17 @@ import { upload } from '../middleware/upload';
 import { Wish } from '../models/Wish';
 import { Pair } from '../models/Pair';
 import { User } from '../models/User';
-import { env } from '../config/env';
+import {
+  sendTgMessage,
+  sendTgPhoto,
+  getPartnerIds,
+  displayName,
+  pickLang,
+  uploadsDir,
+} from '../services/notifications';
 
 const router = Router();
 router.use(authMiddleware);
-
-const TG_API = `https://api.telegram.org/bot${env.botToken}`;
 
 type WishOptionInput = { label: string; link?: string; price?: string };
 
@@ -51,39 +56,7 @@ function optionsText(options: WishOptionInput[] | undefined, lang = 'en'): strin
   return `\n\n${header}\n${lines.join('\n')}`;
 }
 
-// Helper: get partner IDs from active pairs
-async function getPartnerIds(userId: string) {
-  const pairs = await Pair.find({ status: 'active', $or: [{ userA: userId }, { userB: userId }] });
-  return pairs
-    .map((p) => (p.userA.toString() === userId ? p.userB : p.userA))
-    .filter(Boolean);
-}
-
-// Helper: send Telegram message (text only)
-async function sendTgMessage(chatId: number, text: string) {
-  const resp = await fetch(`${TG_API}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
-  });
-  return resp.json() as Promise<{ ok: boolean; description?: string }>;
-}
-
-// Helper: send Telegram photo (file upload)
-async function sendTgPhoto(chatId: number, photoFilePath: string, caption: string) {
-  const photoBuffer = await fs.readFile(photoFilePath);
-  const blob = new Blob([photoBuffer], { type: 'image/webp' });
-  const formData = new FormData();
-  formData.append('chat_id', chatId.toString());
-  formData.append('photo', blob, path.basename(photoFilePath));
-  formData.append('caption', caption);
-  formData.append('parse_mode', 'Markdown');
-
-  const resp = await fetch(`${TG_API}/sendPhoto`, { method: 'POST', body: formData });
-  return resp.json() as Promise<{ ok: boolean; description?: string }>;
-}
-
-// Helper: notify all partners about a new wish (fire-and-forget)
+// Notify all active-pair partners about a new wish (fire-and-forget).
 async function notifyPartners(userId: string, wish: { description: string; photoPath?: string; priority: string; tags: string[]; link?: string; options?: WishOptionInput[] }) {
   try {
     const user = await User.findById(userId);
@@ -96,24 +69,23 @@ async function notifyPartners(userId: string, wish: { description: string; photo
     if (partners.length === 0) return;
 
     const priorityEmoji: Record<string, string> = { high: '🔴', medium: '🟡', low: '🔵' };
-    const name = user.firstName + (user.username ? ` (@${user.username})` : '');
+    const name = displayName(user);
     const tagsStr = wish.tags.length ? `\n${wish.tags.map((t) => `#${t}`).join(' ')}` : '';
     const linkStr = wish.link ? `\n🔗 ${wish.link}` : '';
 
     for (const partner of partners) {
       try {
-        const lang = partner.languageCode || 'en';
+        const lang = pickLang(partner);
         const captions: Record<string, string> = {
           ru: `🎁 *${name}* добавил(а) в вишлист:`,
           uk: `🎁 *${name}* додав(-ла) у вішліст:`,
           en: `🎁 *${name}* added to wishlist:`,
         };
-        const captionPrefix = captions[lang] || captions.en;
         const optionsStr = optionsText(wish.options, lang);
-        const caption = `${captionPrefix}\n\n${priorityEmoji[wish.priority] || '🟡'} ${wish.description}${optionsStr}${linkStr}${tagsStr}`;
+        const caption = `${captions[lang]}\n\n${priorityEmoji[wish.priority] || '🟡'} ${wish.description}${optionsStr}${linkStr}${tagsStr}`;
 
         if (wish.photoPath) {
-          const photoFilePath = path.join(__dirname, '../../uploads', wish.photoPath);
+          const photoFilePath = path.join(uploadsDir(), wish.photoPath);
           try {
             await fs.access(photoFilePath);
             await sendTgPhoto(partner.telegramId, photoFilePath, caption);
