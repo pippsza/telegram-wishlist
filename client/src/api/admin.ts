@@ -7,6 +7,19 @@ interface AdminStats {
   wishCount: number;
   activeWishCount: number;
   receivedWishCount: number;
+  noteCount: number;
+  noteDocCount: number;
+  noteFolderCount: number;
+  eventCount: number;
+  sharedEventCount: number;
+  giftIdeaCount: number;
+  attachmentCount: number;
+}
+
+export interface RecentItem {
+  kind: 'user' | 'wish' | 'note' | 'event' | 'gift' | 'pair' | 'attachment';
+  at: string;
+  data: Record<string, unknown>;
 }
 
 interface AdminPair {
@@ -53,4 +66,9 @@ export async function deleteAdminPair(id: string): Promise<void> {
 
 export async function deleteAdminWish(id: string): Promise<void> {
   await api.delete(`/admin/wishes/${id}`);
+}
+
+export async function getAdminRecent(limit = 30): Promise<{ items: RecentItem[] }> {
+  const { data } = await api.get<{ items: RecentItem[] }>('/admin/recent', { params: { limit } });
+  return data;
 }

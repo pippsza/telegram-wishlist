@@ -17,6 +17,7 @@ import adminRoutes from './routes/admin';
 import calendarRoutes from './routes/calendar';
 import giftIdeaRoutes from './routes/giftIdeas';
 import notesRoutes from './routes/notes';
+import eventAttachmentRoutes from './routes/eventAttachments';
 import { setupYjsPersistence, wsUtils, trackEditor, untrackEditor } from './services/yjsPersistence';
 import { Note } from './models/Note';
 import { userCanAccessNote } from './services/noteAccess';
@@ -51,6 +52,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/gift-ideas', giftIdeaRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api', eventAttachmentRoutes);
 
 app.use(errorHandler);
 

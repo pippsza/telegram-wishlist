@@ -2,12 +2,18 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Gift, ExternalLink, Plus, Pencil, Trash2, Check, Package, Calendar as CalendarIcon, RotateCw } from 'lucide-react';
+import { Gift, ExternalLink, Plus, Pencil, Trash2, Check, Package, Calendar as CalendarIcon, RotateCw, MoreVertical } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { WishList } from '@/components/wishes/WishList';
 import { FilterBar, type SortOption } from '@/components/wishes/FilterBar';
 import { WishDetailModal } from '@/components/wishes/WishDetailModal';
@@ -224,14 +230,21 @@ export function PairDetailPage() {
                         </a>
                       )}
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/gift-ideas')}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteIdeaId(idea._id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-none" aria-label="More">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate('/gift-ideas')}>
+                          <Pencil className="mr-2 h-4 w-4" /> {t('gi_edit')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteIdeaId(idea._id)}>
+                          <Trash2 className="mr-2 h-4 w-4" /> {t('common_delete')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   <div className="mt-2 flex gap-1">
                     <Button size="sm" variant={idea.status === 'idea' ? 'default' : 'outline'} className="h-7 flex-1" onClick={() => handleIdeaStatus(idea._id, 'idea')}>
@@ -268,7 +281,14 @@ export function PairDetailPage() {
             )}
             <ul className="space-y-2">
               {sortedEvents.map(({ ev, when }) => (
-                <Card key={ev._id} className="px-3 py-2">
+                <Card
+                  key={ev._id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/notes?tab=calendar&openEvent=${ev._id}`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/notes?tab=calendar&openEvent=${ev._id}`); } }}
+                  className="cursor-pointer px-3 py-2 transition-colors active:bg-muted/50"
+                >
                   <div className="flex items-start gap-3">
                     <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 text-center">
                       <span className="text-[10px] uppercase text-muted-foreground">{format(when, 'MMM')}</span>
@@ -281,14 +301,27 @@ export function PairDetailPage() {
                       </div>
                       {ev.note && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{ev.note}</p>}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => setDeleteEventId(ev._id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 flex-none"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="More"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => navigate(`/notes?tab=calendar&openEvent=${ev._id}`)}>
+                          <Pencil className="mr-2 h-4 w-4" /> {t('cal_edit')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteEventId(ev._id)}>
+                          <Trash2 className="mr-2 h-4 w-4" /> {t('common_delete')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </Card>
               ))}

@@ -212,6 +212,16 @@ export const en = {
   notes_now_private: 'Now private',
   notes_now_shared: 'Shared',
   notes_placeholder: 'Start writing...',
+
+  att_section_title: 'Attached',
+  att_add: 'Attach',
+  att_empty: 'Nothing attached yet. Pin a wish, gift idea, or note to remember the plan.',
+  att_added: 'Attached',
+  att_already: 'Already attached',
+  att_no_items: 'Nothing to pick here yet.',
+  att_kind_wish: 'Wish',
+  att_kind_gift: 'Gift',
+  att_kind_note: 'Note',
 } as const;
 
 export type TranslationKey = keyof typeof en;

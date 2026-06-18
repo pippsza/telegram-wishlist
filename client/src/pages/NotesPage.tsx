@@ -14,6 +14,7 @@ import {
   Users,
   Search,
   X,
+  MoreVertical,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,12 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { listNotes, createNote, updateNote, deleteNote } from '@/api/notes';
 import { getPairs } from '@/api/pairs';
@@ -215,17 +222,42 @@ export function NotesPage({ embedded = false }: NotesPageProps = {}) {
         {folders.length > 0 && (
           <div className="mt-3 space-y-1.5">
             {folders.map((f) => (
-              <Card key={f._id} className="flex items-center gap-2 px-3 py-2">
-                <button onClick={() => setPath((prev) => [...prev, f])} className="flex flex-1 items-center gap-2 text-left">
-                  <Folder className="h-4 w-4 text-amber-500" />
-                  <span className="truncate font-medium">{f.title}</span>
-                </button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setRenameTarget(f); setRenameValue(f.title); }}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(f)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+              <Card
+                key={f._id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setPath((prev) => [...prev, f])}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setPath((prev) => [...prev, f]);
+                  }
+                }}
+                className="flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors active:bg-muted/50"
+              >
+                <Folder className="h-4 w-4 flex-none text-amber-500" />
+                <span className="flex-1 truncate font-medium">{f.title}</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label="More"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={() => { setRenameTarget(f); setRenameValue(f.title); }}>
+                      <Pencil className="mr-2 h-4 w-4" /> {t('notes_rename')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(f)}>
+                      <Trash2 className="mr-2 h-4 w-4" /> {t('common_delete')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </Card>
             ))}
           </div>
@@ -234,21 +266,46 @@ export function NotesPage({ embedded = false }: NotesPageProps = {}) {
         {docs.length > 0 && (
           <div className="mt-3 space-y-1.5">
             {docs.map((d) => (
-              <Card key={d._id} className="flex items-center gap-2 px-3 py-2">
-                <button onClick={() => navigate(`/notes/${d._id}`)} className="flex flex-1 items-center gap-2 text-left min-w-0">
-                  <FileText className="h-4 w-4 text-blue-500 flex-none" />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{d.title}</div>
-                    {d.plainText && <div className="truncate text-xs text-muted-foreground">{d.plainText}</div>}
-                    <div className="text-[10px] text-muted-foreground">{format(new Date(d.updatedAt), 'MMM d, HH:mm')}</div>
-                  </div>
-                </button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setRenameTarget(d); setRenameValue(d.title); }}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(d)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+              <Card
+                key={d._id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/notes/${d._id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(`/notes/${d._id}`);
+                  }
+                }}
+                className="flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors active:bg-muted/50"
+              >
+                <FileText className="h-4 w-4 flex-none text-blue-500" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{d.title}</div>
+                  {d.plainText && <div className="truncate text-xs text-muted-foreground">{d.plainText}</div>}
+                  <div className="text-[10px] text-muted-foreground">{format(new Date(d.updatedAt), 'MMM d, HH:mm')}</div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 flex-none"
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label="More"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={() => { setRenameTarget(d); setRenameValue(d.title); }}>
+                      <Pencil className="mr-2 h-4 w-4" /> {t('notes_rename')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(d)}>
+                      <Trash2 className="mr-2 h-4 w-4" /> {t('common_delete')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </Card>
             ))}
           </div>

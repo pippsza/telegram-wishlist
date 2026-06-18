@@ -196,4 +196,14 @@ export const uk: Record<TranslationKey, string> = {
   notes_now_private: 'Тепер особиста',
   notes_now_shared: 'Розшарено',
   notes_placeholder: 'Почни писати...',
+
+  att_section_title: 'Привʼязано',
+  att_add: 'Привʼязати',
+  att_empty: 'Нічого не привʼязано. Прикріпи бажання, ідею подарунку чи нотатку щоб не забути.',
+  att_added: 'Привʼязано',
+  att_already: 'Вже привʼязано',
+  att_no_items: 'Тут поки нема що обрати.',
+  att_kind_wish: 'Бажання',
+  att_kind_gift: 'Подарунок',
+  att_kind_note: 'Нотатка',
 };

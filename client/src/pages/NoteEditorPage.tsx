@@ -8,13 +8,24 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import { getNote, updateNote, deleteNote } from '@/api/notes';
-
-const NoteEditor = lazy(() => import('@/components/notes/NoteEditor').then((m) => ({ default: m.NoteEditor })));
 import { getPairs } from '@/api/pairs';
 import { useAuth } from '@/context/AuthContext';
 import { useT } from '@/i18n';
 import type { Note, Pair } from '@/types';
+
+const NoteEditor = lazy(() =>
+  import('@/components/notes/NoteEditor')
+    .then((m) => {
+      console.log('[NoteEditorPage] editor chunk loaded');
+      return { default: m.NoteEditor };
+    })
+    .catch((err) => {
+      console.error('[NoteEditorPage] failed to load editor chunk', err);
+      throw err;
+    })
+);
 
 function partnerLabel(p: Pair): string {
   return p.partner.firstName + (p.partner.username ? ` (@${p.partner.username})` : '');
@@ -34,14 +45,19 @@ export function NoteEditorPage() {
 
   useEffect(() => {
     if (!id) return;
+    console.log('[NoteEditorPage] fetching note', id);
     Promise.all([getNote(id), getPairs()])
       .then(([nRes, pRes]) => {
+        console.log('[NoteEditorPage] note loaded', { id: nRes.note._id, type: nRes.note.type, pair: nRes.note.pair, title: nRes.note.title });
         setNote(nRes.note);
         setTitle(nRes.note.title);
         setPairs(pRes.pairs);
         setSharePair(nRes.note.pair ?? '');
       })
-      .catch(() => toast.error(t('common_failed_load')));
+      .catch((err) => {
+        console.error('[NoteEditorPage] failed to load note', err);
+        toast.error(t('common_failed_load'));
+      });
   }, [id]);
 
   async function saveTitle() {
@@ -107,9 +123,11 @@ export function NoteEditorPage() {
         </div>
       </header>
 
-      <Suspense fallback={<div className="flex flex-1 items-center justify-center"><LoadingSpinner /></div>}>
-        <NoteEditor noteId={note._id} userName={user?.firstName || 'You'} noteTitle={note.title} />
-      </Suspense>
+      <ErrorBoundary label="NoteEditor">
+        <Suspense fallback={<div className="flex flex-1 items-center justify-center"><LoadingSpinner /></div>}>
+          <NoteEditor noteId={note._id} userName={user?.firstName || 'You'} noteTitle={note.title} />
+        </Suspense>
+      </ErrorBoundary>
 
       <Sheet open={shareOpen} onOpenChange={setShareOpen}>
         <SheetContent side="bottom">

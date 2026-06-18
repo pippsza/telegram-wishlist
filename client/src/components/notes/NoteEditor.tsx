@@ -34,23 +34,46 @@ function safeFilename(title: string): string {
   return title.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'note';
 }
 
+// Verbose logging that survives in production (no minification of console).
+// Tag every message with [NoteEditor] so it's easy to grep in user-pasted logs.
+const log = (...args: unknown[]) => console.log('[NoteEditor]', ...args);
+const logErr = (...args: unknown[]) => console.error('[NoteEditor]', ...args);
+
 export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEditorProps) {
+  log('render', { noteId, userName, hasTitle: !!noteTitle });
   const t = useT();
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [peers, setPeers] = useState<Array<{ id: number; name: string; color: string }>>([]);
-  const ydoc = useMemo(() => new Y.Doc(), [noteId]);
+  const ydoc = useMemo(() => {
+    log('creating Y.Doc for', noteId);
+    return new Y.Doc();
+  }, [noteId]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const provider = useMemo(() => {
     const token = getAuthToken() || '';
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${proto}//${window.location.host}/yws`;
-    return new WebsocketProvider(url, noteId, ydoc, { params: { token } });
+    log('creating WebsocketProvider', { url, noteId, hasToken: !!token, tokenLen: token.length });
+    try {
+      return new WebsocketProvider(url, noteId, ydoc, { params: { token } });
+    } catch (err) {
+      logErr('WebsocketProvider constructor threw', err);
+      throw err;
+    }
   }, [noteId, ydoc]);
 
   useEffect(() => {
-    const onStatus = (e: { status: 'connecting' | 'connected' | 'disconnected' }) => setStatus(e.status);
+    log('subscribing provider events');
+    const onStatus = (e: { status: 'connecting' | 'connected' | 'disconnected' }) => {
+      log('ws status', e.status);
+      setStatus(e.status);
+    };
+    const onConnError = (err: Event) => logErr('ws connection-error', err);
+    const onConnClose = (e: CloseEvent | null) => log('ws connection-close', { code: e?.code, reason: e?.reason });
     provider.on('status', onStatus);
+    provider.on('connection-error', onConnError);
+    provider.on('connection-close', onConnClose);
 
     const updateAwareness = () => {
       const states = provider.awareness.getStates();
@@ -66,12 +89,15 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
     updateAwareness();
 
     return () => {
+      log('teardown provider for', noteId);
       provider.off('status', onStatus);
+      provider.off('connection-error', onConnError);
+      provider.off('connection-close', onConnClose);
       provider.awareness.off('change', updateAwareness);
       provider.destroy();
       ydoc.destroy();
     };
-  }, [provider, ydoc]);
+  }, [provider, ydoc, noteId]);
 
   const editor = useEditor({
     extensions: [

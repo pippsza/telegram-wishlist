@@ -103,3 +103,19 @@ export interface Note {
   createdAt: string;
   updatedAt: string;
 }
+
+export type AttachmentKind = 'wish' | 'gift' | 'note';
+
+export interface EventAttachment {
+  _id: string;
+  owner: string;
+  event: string;
+  kind: AttachmentKind;
+  // The hydrated target object. Shape depends on `kind`:
+  // kind === 'wish'  -> Wish
+  // kind === 'gift'  -> GiftIdea
+  // kind === 'note'  -> Note (without yjsState)
+  target: Wish | GiftIdea | Note | null;
+  createdAt: string;
+  updatedAt: string;
+}

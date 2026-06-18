@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Gift, ExternalLink, Check, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Gift, ExternalLink, Check, Package, MoreVertical } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,12 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PhotoUpload } from '@/components/wishes/PhotoUpload';
 import {
@@ -207,30 +213,60 @@ export function GiftIdeasPage() {
               <h2 className="mb-2 text-sm font-medium text-muted-foreground">{t('gi_for')} {pair ? partnerLabel(pair) : ''}</h2>
               <ul className="space-y-2">
                 {items.map((idea) => (
-                  <Card key={idea._id} className="p-3">
+                  <Card
+                    key={idea._id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openEdit(idea)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(idea); } }}
+                    className="cursor-pointer p-3 transition-colors active:bg-muted/50"
+                  >
                     <div className="flex gap-3">
                       {idea.photoPath && (
                         <img src={`/uploads/${idea.photoPath}`} alt="" className="h-16 w-16 flex-none rounded object-cover" />
                       )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium truncate">{idea.title}</span>
-                          <Badge variant={statusVariant(idea.status)}>{idea.status}</Badge>
+                          <span className="truncate font-medium">{idea.title}</span>
+                          <Badge variant={statusVariant(idea.status)}>{t(`gi_status_${idea.status}` as const)}</Badge>
                         </div>
                         {idea.price && <div className="text-xs text-muted-foreground">{idea.price}</div>}
-                        {idea.body && <p className="mt-1 text-xs text-muted-foreground line-clamp-2 whitespace-pre-wrap">{idea.body}</p>}
+                        {idea.body && <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">{idea.body}</p>}
                         {idea.link && (
-                          <a href={idea.link} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-primary">
-                            <ExternalLink className="h-3 w-3" /> link
+                          <a
+                            href={idea.link}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1 inline-flex items-center gap-1 text-xs text-primary"
+                          >
+                            <ExternalLink className="h-3 w-3" /> {t('gi_link').toLowerCase()}
                           </a>
                         )}
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(idea)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(idea._id)}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-none"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="More"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={() => openEdit(idea)}>
+                            <Pencil className="mr-2 h-4 w-4" /> {t('gi_edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(idea._id)}>
+                            <Trash2 className="mr-2 h-4 w-4" /> {t('common_delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <div className="mt-2 flex gap-1">
+                    <div className="mt-2 flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant={idea.status === 'idea' ? 'default' : 'outline'} className="h-7 flex-1" onClick={() => handleStatusChange(idea._id, 'idea')}>
                         {t('gi_status_idea')}
                       </Button>

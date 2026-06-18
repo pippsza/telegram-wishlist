@@ -3,7 +3,7 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trash2, Users, Heart, Star, Loader2 } from 'lucide-react';
+import { Trash2, Users, Heart, Star, Loader2, FileText, Calendar as CalendarIcon, Gift, Link as LinkIcon, Activity } from 'lucide-react';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { toast } from 'sonner';
 import {
@@ -12,9 +12,11 @@ import {
   getAdminUsers,
   getAdminPairs,
   getAdminWishes,
+  getAdminRecent,
   deleteAdminUser,
   deleteAdminPair,
   deleteAdminWish,
+  type RecentItem,
 } from '@/api/admin';
 import type { User, Wish } from '@/types';
 
@@ -24,6 +26,13 @@ interface AdminStats {
   wishCount: number;
   activeWishCount: number;
   receivedWishCount: number;
+  noteCount: number;
+  noteDocCount: number;
+  noteFolderCount: number;
+  eventCount: number;
+  sharedEventCount: number;
+  giftIdeaCount: number;
+  attachmentCount: number;
 }
 
 interface AdminPair {
@@ -41,6 +50,7 @@ export function AdminPage() {
   const [users, setUsers] = useState<(User & { _id: string; createdAt: string; languageCode?: string })[]>([]);
   const [pairs, setPairs] = useState<AdminPair[]>([]);
   const [wishes, setWishes] = useState<(Wish & { owner: User })[]>([]);
+  const [recent, setRecent] = useState<RecentItem[] | null>(null);
   const [tab, setTab] = useState('stats');
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'user' | 'pair' | 'wish'; id: string } | null>(null);
@@ -54,16 +64,18 @@ export function AdminPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [s, u, p, w] = await Promise.all([
+      const [s, u, p, w, r] = await Promise.all([
         getAdminStats(),
         getAdminUsers(),
         getAdminPairs(),
         getAdminWishes(),
+        getAdminRecent(40),
       ]);
       setStats(s);
       setUsers(u.users);
       setPairs(p.pairs);
       setWishes(w.wishes);
+      setRecent(r.items);
     } catch {
       toast.error('Failed to load admin data');
     }
@@ -113,8 +125,9 @@ export function AdminPage() {
     <>
       <Header title="Admin" />
       <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="mx-4 mt-2 grid w-[calc(100%-2rem)] grid-cols-4">
+        <TabsList className="mx-4 mt-2 grid w-[calc(100%-2rem)] grid-cols-5">
           <TabsTrigger value="stats">Stats</TabsTrigger>
+          <TabsTrigger value="recent">Recent</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="pairs">Pairs</TabsTrigger>
           <TabsTrigger value="wishes">Wishes</TabsTrigger>
@@ -124,11 +137,25 @@ export function AdminPage() {
           {stats && (
             <div className="grid grid-cols-2 gap-3">
               <StatCard icon={<Users className="h-5 w-5" />} label="Users" value={stats.userCount} />
-              <StatCard icon={<Heart className="h-5 w-5" />} label="Pairs" value={stats.pairCount} />
+              <StatCard icon={<Heart className="h-5 w-5" />} label="Active pairs" value={stats.pairCount} />
               <StatCard icon={<Star className="h-5 w-5" />} label="Active wishes" value={stats.activeWishCount} />
-              <StatCard icon={<Star className="h-5 w-5" />} label="Received" value={stats.receivedWishCount} />
+              <StatCard icon={<Star className="h-5 w-5" />} label="Received wishes" value={stats.receivedWishCount} />
+              <StatCard icon={<FileText className="h-5 w-5" />} label="Notes" value={stats.noteDocCount} />
+              <StatCard icon={<FileText className="h-5 w-5" />} label="Folders" value={stats.noteFolderCount} />
+              <StatCard icon={<CalendarIcon className="h-5 w-5" />} label="Events" value={stats.eventCount} />
+              <StatCard icon={<CalendarIcon className="h-5 w-5" />} label="Shared events" value={stats.sharedEventCount} />
+              <StatCard icon={<Gift className="h-5 w-5" />} label="Gift ideas" value={stats.giftIdeaCount} />
+              <StatCard icon={<LinkIcon className="h-5 w-5" />} label="Attachments" value={stats.attachmentCount} />
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="recent" className="space-y-1.5 p-4">
+          {recent === null && <p className="text-sm text-muted-foreground">Loading...</p>}
+          {recent?.length === 0 && <p className="text-sm text-muted-foreground">Nothing yet.</p>}
+          {recent?.map((item, i) => (
+            <RecentRow key={`${item.kind}-${i}`} item={item} />
+          ))}
         </TabsContent>
 
         <TabsContent value="users" className="p-4 space-y-2">
@@ -208,6 +235,47 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
         <div>
           <p className="text-2xl font-bold">{value}</p>
           <p className="text-xs text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecentRow({ item }: { item: RecentItem }) {
+  const Icon = {
+    user: Users,
+    pair: Heart,
+    wish: Star,
+    note: FileText,
+    event: CalendarIcon,
+    gift: Gift,
+    attachment: LinkIcon,
+  }[item.kind] ?? Activity;
+  const d = item.data as Record<string, unknown>;
+  const ownerName = (() => {
+    const owner = d.owner as { firstName?: string; username?: string } | undefined;
+    if (owner) return owner.firstName + (owner.username ? ` (@${owner.username})` : '');
+    if (item.kind === 'user') return (d.firstName as string) + ((d.username as string) ? ` (@${d.username})` : '');
+    if (item.kind === 'pair') {
+      const a = d.userA as { firstName?: string } | undefined;
+      const b = d.userB as { firstName?: string } | undefined;
+      return `${a?.firstName ?? '?'} ↔ ${b?.firstName ?? '?'}`;
+    }
+    return '';
+  })();
+  const title = (d.title as string) ?? (d.description as string) ?? (d.kind as string) ?? '';
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-3 p-2.5">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium uppercase text-muted-foreground text-[10px]">{item.kind}</span>
+            <span className="truncate">{title}</span>
+          </div>
+          <div className="truncate text-[11px] text-muted-foreground">
+            {ownerName} · {new Date(item.at).toLocaleString()}
+          </div>
         </div>
       </CardContent>
     </Card>

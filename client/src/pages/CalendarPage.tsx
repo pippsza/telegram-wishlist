@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, Trash2, Pencil, Calendar as CalendarIcon, RotateCw, Lock, Users } from 'lucide-react';
+import { Plus, Trash2, Pencil, Calendar as CalendarIcon, RotateCw, Lock, Users, MoreVertical } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +11,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { listEvents, createEvent, updateEvent, deleteEvent, type CalendarEventInput } from '@/api/calendar';
 import { getPairs } from '@/api/pairs';
+import { AttachmentsSection } from '@/components/calendar/AttachmentsSection';
 import { useT } from '@/i18n';
 import type { CalendarEvent, Pair } from '@/types';
 
@@ -59,6 +67,7 @@ interface CalendarPageProps {
 
 export function CalendarPage({ embedded = false }: CalendarPageProps = {}) {
   const t = useT();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +85,20 @@ export function CalendarPage({ embedded = false }: CalendarPageProps = {}) {
       .catch(() => toast.error(t('common_failed_load')))
       .finally(() => setLoading(false));
   }, [t]);
+
+  // Auto-open an event when navigated to with ?openEvent=<id> (used by PairDetail).
+  useEffect(() => {
+    const target = searchParams.get('openEvent');
+    if (!target || events.length === 0) return;
+    const ev = events.find((e) => e._id === target);
+    if (!ev) return;
+    openEdit(ev);
+    // Clear the param so re-open works on subsequent navigations.
+    const next = new URLSearchParams(searchParams);
+    next.delete('openEvent');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, searchParams]);
 
   const pairById = useMemo(() => {
     const m = new Map<string, Pair>();
@@ -161,7 +184,14 @@ export function CalendarPage({ embedded = false }: CalendarPageProps = {}) {
     const pairId = typeof ev.pair === 'string' ? ev.pair : ev.pair?._id;
     const pair = pairId ? pairById.get(pairId) : undefined;
     return (
-      <Card key={ev._id} className="px-3 py-2">
+      <Card
+        key={ev._id}
+        role="button"
+        tabIndex={0}
+        onClick={() => openEdit(ev)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEdit(ev); } }}
+        className="cursor-pointer px-3 py-2 transition-colors active:bg-muted/50"
+      >
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 text-center">
             <span className="text-[10px] uppercase text-muted-foreground">{format(when, 'MMM')}</span>
@@ -169,7 +199,7 @@ export function CalendarPage({ embedded = false }: CalendarPageProps = {}) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-medium truncate">{ev.title}</span>
+              <span className="truncate font-medium">{ev.title}</span>
               {ev.isRecurringYearly && <RotateCw className="h-3 w-3 text-muted-foreground" />}
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
@@ -185,16 +215,29 @@ export function CalendarPage({ embedded = false }: CalendarPageProps = {}) {
                 </>
               )}
             </div>
-            {ev.note && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{ev.note}</p>}
+            {ev.note && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{ev.note}</p>}
           </div>
-          <div className="flex flex-col gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(ev)}>
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(ev._id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-none"
+                onClick={(e) => e.stopPropagation()}
+                aria-label="More"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={() => openEdit(ev)}>
+                <Pencil className="mr-2 h-4 w-4" /> {t('cal_edit')}
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(ev._id)}>
+                <Trash2 className="mr-2 h-4 w-4" /> {t('common_delete')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </Card>
     );
@@ -282,6 +325,12 @@ export function CalendarPage({ embedded = false }: CalendarPageProps = {}) {
               </Button>
               <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>{t('common_cancel')}</Button>
             </div>
+
+            {form.id && (
+              <div className="border-t pt-3">
+                <AttachmentsSection eventId={form.id} pairId={form.pairId || null} />
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>

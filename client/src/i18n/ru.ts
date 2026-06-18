@@ -196,4 +196,14 @@ export const ru: Record<TranslationKey, string> = {
   notes_now_private: 'Теперь личная',
   notes_now_shared: 'Расшарено',
   notes_placeholder: 'Начни писать...',
+
+  att_section_title: 'Привязано',
+  att_add: 'Привязать',
+  att_empty: 'Ничего не привязано. Прикрепи виш, идею подарка или заметку чтобы не забыть.',
+  att_added: 'Привязано',
+  att_already: 'Уже привязано',
+  att_no_items: 'Тут пока нечего выбрать.',
+  att_kind_wish: 'Виш',
+  att_kind_gift: 'Подарок',
+  att_kind_note: 'Заметка',
 };
