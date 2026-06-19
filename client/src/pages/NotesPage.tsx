@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import {
   Plus,
   Folder,
+  FolderPlus,
   FileText,
   ChevronRight,
   Pencil,
@@ -313,8 +314,14 @@ export function NotesPage({ embedded = false }: NotesPageProps = {}) {
       </div>
 
       <div className="fixed fab-bottom right-4 z-30 flex flex-col gap-2">
-        <Button size="icon" variant="secondary" className="h-12 w-12 rounded-full shadow" onClick={() => { setCreateKind('folder'); setNewTitle(''); setCreateOpen(true); }}>
-          <Folder className="h-5 w-5" />
+        <Button
+          size="icon"
+          variant="secondary"
+          className="h-12 w-12 rounded-full shadow"
+          onClick={() => { setCreateKind('folder'); setNewTitle(''); setCreateOpen(true); }}
+          aria-label={t('notes_new_folder')}
+        >
+          <FolderPlus className="h-5 w-5" />
         </Button>
         <Button size="icon" className="h-14 w-14 rounded-full shadow-lg" onClick={() => { setCreateKind('doc'); setNewTitle(''); setCreateOpen(true); }}>
           <Plus className="h-6 w-6" />

@@ -44,6 +44,30 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
   const t = useT();
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [peers, setPeers] = useState<Array<{ id: number; name: string; color: string }>>([]);
+  // Height of the on-screen keyboard reported by visualViewport. We reserve
+  // that much space below the editor so the caret line never gets buried.
+  const [kbInset, setKbInset] = useState(0);
+
+  // visualViewport: when the soft keyboard slides up the visual viewport
+  // shrinks. Push that delta as padding below the editor so the active line
+  // stays visible above the keyboard. iOS Safari, Telegram WebView and
+  // Chrome Android all expose this API.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKbInset(inset);
+    };
+    onResize();
+    vv.addEventListener('resize', onResize);
+    vv.addEventListener('scroll', onResize);
+    return () => {
+      vv.removeEventListener('resize', onResize);
+      vv.removeEventListener('scroll', onResize);
+    };
+  }, []);
+
   const ydoc = useMemo(() => {
     log('creating Y.Doc for', noteId);
     return new Y.Doc();
@@ -148,7 +172,11 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
     try {
       const { url } = await uploadNoteImage(noteId, file);
       if (!editor) return;
-      editor.chain().focus().setImage({ src: url }).run();
+      // After the image, drop into a fresh paragraph so the caret is ready
+      // for the next thought. TrailingNode already keeps an empty paragraph
+      // at the end, but createParagraphNear places focus where the user
+      // actually wants it (right under the image they just inserted).
+      editor.chain().focus().setImage({ src: url }).createParagraphNear().run();
     } catch (err) {
       console.error('Image upload failed', err);
       toast.error('Image upload failed');
@@ -249,7 +277,24 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
           </Button>
         </div>
       </div>
-      <EditorContent editor={editor} className="flex-1 overflow-y-auto" />
+      {/* Scrollable editor body. Bottom padding equals the keyboard inset so the
+          active line is never covered by the on-screen keyboard. The tap-strip
+          below the editor content focuses the document end, mirroring the
+          Notion/Bear convention "tap empty space below to keep writing". */}
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{
+          paddingBottom: kbInset ? `${kbInset}px` : 'env(safe-area-inset-bottom, 0px)',
+          scrollPaddingBottom: `${kbInset + 80}px`,
+        }}
+      >
+        <EditorContent editor={editor} />
+        <div
+          aria-hidden
+          onClick={() => editor?.chain().focus('end').run()}
+          className="min-h-[35vh] cursor-text"
+        />
+      </div>
     </div>
   );
 }
