@@ -70,19 +70,9 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle, onPresence 
     const onResize = () => {
       const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       setKbInset(inset);
-      // After the keyboard finishes its slide-up the caret may now be
-      // hidden under it - chase it back into view.
-      requestAnimationFrame(() => {
-        const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0) return;
-        const range = sel.getRangeAt(0).cloneRange();
-        range.collapse(false);
-        const rect = range.getBoundingClientRect();
-        const visibleBottom = vv.offsetTop + vv.height;
-        if (rect.bottom > visibleBottom - 24) {
-          window.scrollBy({ top: rect.bottom - (visibleBottom - 24), behavior: 'smooth' });
-        }
-      });
+      // After the keyboard finishes its slide-up the scroller has shrunk;
+      // chase the caret back into view inside the now-smaller container.
+      requestAnimationFrame(scrollCaretIntoView);
     };
     onResize();
     vv.addEventListener('resize', onResize);
@@ -152,26 +142,40 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle, onPresence 
     };
   }, [provider, ydoc, noteId]);
 
-  // Scroll the caret into view inside the scroller above the keyboard. Uses
-  // the live cursor DOM rect rather than ProseMirror's scrollIntoView so it
-  // respects the visualViewport (keyboard) bottom, not just the container's
-  // own bounds.
+  // Ref to the scroller around EditorContent. Caret scroll-into-view needs
+  // to act on THIS element - not window - because the document body is
+  // pinned to 100dvh and never scrolls itself.
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll the inner editor scroller so the caret sits above the keyboard.
+  // Reads the live DOM rect of the active selection and computes a delta
+  // relative to the scroller's visible area, instead of trusting window
+  // scroll (which never moves under our flex / 100dvh layout).
   const scrollCaretIntoView = () => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0).cloneRange();
     range.collapse(false);
-    const rect = range.getBoundingClientRect();
-    if (rect.top === 0 && rect.bottom === 0) return;
-    const vv = window.visualViewport;
-    const visibleBottom = (vv?.offsetTop ?? 0) + (vv?.height ?? window.innerHeight);
-    const margin = 24;
-    if (rect.bottom > visibleBottom - margin) {
-      const delta = rect.bottom - (visibleBottom - margin);
-      window.scrollBy({ top: delta, behavior: 'smooth' });
-    } else if (rect.top < (vv?.offsetTop ?? 0) + 60) {
-      const delta = rect.top - ((vv?.offsetTop ?? 0) + 60);
-      window.scrollBy({ top: delta, behavior: 'smooth' });
+    const caretRect = range.getBoundingClientRect();
+    if (caretRect.top === 0 && caretRect.bottom === 0) return;
+    const scrollerRect = scroller.getBoundingClientRect();
+    const visibleHeight = scroller.clientHeight;
+    const caretRelTop = caretRect.top - scrollerRect.top;
+    const caretRelBottom = caretRect.bottom - scrollerRect.top;
+    const bottomMargin = 60;
+    const topMargin = 24;
+    if (caretRelBottom > visibleHeight - bottomMargin) {
+      scroller.scrollBy({
+        top: caretRelBottom - (visibleHeight - bottomMargin),
+        behavior: 'smooth',
+      });
+    } else if (caretRelTop < topMargin) {
+      scroller.scrollBy({
+        top: caretRelTop - topMargin,
+        behavior: 'smooth',
+      });
     }
   };
 
@@ -365,6 +369,7 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle, onPresence 
           below the editor content focuses the document end, mirroring the
           Notion/Bear convention "tap empty space below to keep writing". */}
       <div
+        ref={scrollerRef}
         className="flex-1 overflow-y-auto"
         style={{
           paddingBottom: kbInset ? `${kbInset}px` : 'env(safe-area-inset-bottom, 0px)',
