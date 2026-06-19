@@ -58,6 +58,19 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
     const onResize = () => {
       const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       setKbInset(inset);
+      // After the keyboard finishes its slide-up the caret may now be
+      // hidden under it - chase it back into view.
+      requestAnimationFrame(() => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+        const range = sel.getRangeAt(0).cloneRange();
+        range.collapse(false);
+        const rect = range.getBoundingClientRect();
+        const visibleBottom = vv.offsetTop + vv.height;
+        if (rect.bottom > visibleBottom - 24) {
+          window.scrollBy({ top: rect.bottom - (visibleBottom - 24), behavior: 'smooth' });
+        }
+      });
     };
     onResize();
     vv.addEventListener('resize', onResize);
@@ -123,6 +136,29 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
     };
   }, [provider, ydoc, noteId]);
 
+  // Scroll the caret into view inside the scroller above the keyboard. Uses
+  // the live cursor DOM rect rather than ProseMirror's scrollIntoView so it
+  // respects the visualViewport (keyboard) bottom, not just the container's
+  // own bounds.
+  const scrollCaretIntoView = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0).cloneRange();
+    range.collapse(false);
+    const rect = range.getBoundingClientRect();
+    if (rect.top === 0 && rect.bottom === 0) return;
+    const vv = window.visualViewport;
+    const visibleBottom = (vv?.offsetTop ?? 0) + (vv?.height ?? window.innerHeight);
+    const margin = 24;
+    if (rect.bottom > visibleBottom - margin) {
+      const delta = rect.bottom - (visibleBottom - margin);
+      window.scrollBy({ top: delta, behavior: 'smooth' });
+    } else if (rect.top < (vv?.offsetTop ?? 0) + 60) {
+      const delta = rect.top - ((vv?.offsetTop ?? 0) + 60);
+      window.scrollBy({ top: delta, behavior: 'smooth' });
+    }
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ undoRedo: false }),
@@ -136,6 +172,16 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
       Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: false }),
     ],
     autofocus: 'end',
+    onSelectionUpdate: () => {
+      // requestAnimationFrame so the new caret position is committed to the
+      // DOM before we read its rect.
+      requestAnimationFrame(scrollCaretIntoView);
+    },
+    onFocus: () => {
+      // iOS opens the keyboard ~200ms after focus; wait for the viewport to
+      // settle before measuring.
+      setTimeout(scrollCaretIntoView, 250);
+    },
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none min-h-[60vh] p-3 focus:outline-none',
