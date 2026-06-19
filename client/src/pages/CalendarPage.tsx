@@ -183,7 +183,7 @@ export function CalendarPage({ embedded = false }: CalendarPageProps = {}) {
       </div>
 
       <Button
-        className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg"
+        className="fixed fab-bottom right-4 z-30 h-14 w-14 rounded-full shadow-lg"
         size="icon"
         onClick={() => navigate('/calendar/new')}
       >

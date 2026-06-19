@@ -71,6 +71,15 @@ function SheetContent({
             "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t",
           className
         )}
+        // Account for the iOS home-indicator and rounded screen corners on the
+        // bottom side so the last button isn't sliced. Pure CSS so the safe-area
+        // value is read from the device at runtime; falls back to 12px in browsers
+        // without env() support.
+        style={
+          side === "bottom"
+            ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }
+            : undefined
+        }
         {...props}
       >
         {children}

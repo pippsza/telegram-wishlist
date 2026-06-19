@@ -23,7 +23,12 @@ export function BottomNav() {
   }, []);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm"
+      // Extend background into the iOS home-indicator zone so the nav doesn't
+      // float over the rounded screen corner with a visible gap.
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       <div className="flex h-16 items-stretch">
         {tabs.map(({ to, icon: Icon, key }) => (
           <NavLink

@@ -209,6 +209,13 @@ html.tg-theme {
   }
 }
 
+/* Floating action button bottom offset: must sit clear of the BottomNav
+   (h-16 = 64px) AND the iOS home-indicator zone, so it isn't sliced by the
+   rounded screen corner. 80px from the nav top + the device safe-area inset. */
+.fab-bottom {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+}
+
 /* Tiptap CollaborationCaret (v3.27+, class "collaboration-carets__*"). Also
    keeps the legacy CollaborationCursor classes alive for older builds. */
 .collaboration-cursor__caret,
