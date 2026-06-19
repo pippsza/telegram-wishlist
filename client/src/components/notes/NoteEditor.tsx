@@ -1,25 +1,39 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import { Markdown } from 'tiptap-markdown';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { toast } from 'sonner';
-import { ImageIcon, Bold, Italic, List, ListOrdered, Heading2, Quote, Code, Undo2, Redo2, Copy, Download } from 'lucide-react';
+import { ImageIcon, Bold, Italic, List, ListOrdered, Heading2, Quote, Code, Undo2, Redo2, Copy, Download, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getAuthToken } from '@/api/axios';
 import { uploadNoteImage } from '@/api/notes';
 import { useT } from '@/i18n';
+import { compressImage } from './compressImage';
+
+export type EditorConnStatus = 'connecting' | 'connected' | 'disconnected';
+export interface EditorPeer {
+  id: number;
+  name: string;
+  color: string;
+}
 
 interface NoteEditorProps {
   noteId: string;
   userName: string;
   userColor?: string;
   noteTitle?: string;
+  // Bubble presence (status + remote peers) up to the page so it can render
+  // in the page header instead of stealing toolbar space.
+  onPresence?: (status: EditorConnStatus, peers: EditorPeer[]) => void;
 }
 
 // Deterministic pastel color from a name so each editor gets a stable cursor color.
@@ -39,11 +53,9 @@ function safeFilename(title: string): string {
 const log = (...args: unknown[]) => console.log('[NoteEditor]', ...args);
 const logErr = (...args: unknown[]) => console.error('[NoteEditor]', ...args);
 
-export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEditorProps) {
+export function NoteEditor({ noteId, userName, userColor, noteTitle, onPresence }: NoteEditorProps) {
   log('render', { noteId, userName, hasTitle: !!noteTitle });
   const t = useT();
-  const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
-  const [peers, setPeers] = useState<Array<{ id: number; name: string; color: string }>>([]);
   // Height of the on-screen keyboard reported by visualViewport. We reserve
   // that much space below the editor so the caret line never gets buried.
   const [kbInset, setKbInset] = useState(0);
@@ -102,9 +114,12 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
 
   useEffect(() => {
     log('subscribing provider events');
-    const onStatus = (e: { status: 'connecting' | 'connected' | 'disconnected' }) => {
+    let lastStatus: EditorConnStatus = 'connecting';
+    let lastPeers: EditorPeer[] = [];
+    const onStatus = (e: { status: EditorConnStatus }) => {
       log('ws status', e.status);
-      setStatus(e.status);
+      lastStatus = e.status;
+      onPresence?.(lastStatus, lastPeers);
     };
     const onConnError = (err: Event) => logErr('ws connection-error', err);
     const onConnClose = (e: CloseEvent | null) => log('ws connection-close', { code: e?.code, reason: e?.reason });
@@ -114,13 +129,14 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
 
     const updateAwareness = () => {
       const states = provider.awareness.getStates();
-      const list: Array<{ id: number; name: string; color: string }> = [];
+      const list: EditorPeer[] = [];
       states.forEach((state, clientId) => {
         if (clientId === provider.awareness.clientID) return;
         const u = (state as { user?: { name: string; color: string } }).user;
         if (u) list.push({ id: clientId, name: u.name, color: u.color });
       });
-      setPeers(list);
+      lastPeers = list;
+      onPresence?.(lastStatus, lastPeers);
     };
     provider.awareness.on('change', updateAwareness);
     updateAwareness();
@@ -169,6 +185,8 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
       }),
       Image.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({ placeholder: t('notes_placeholder') }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
       Markdown.configure({ html: false, transformPastedText: true, transformCopiedText: false }),
     ],
     autofocus: 'end',
@@ -214,18 +232,49 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
     },
   }, [provider]);
 
+  // Optimistic image insert: compress -> show local blob immediately ->
+  // upload in the background -> swap the src to the server URL. Failed
+  // uploads remove the placeholder so the document stays clean.
   async function insertUploadedImage(file: File) {
+    if (!editor) return;
+    const compressed = await compressImage(file, { maxDim: 1600, quality: 0.85 });
+    const localUrl = URL.createObjectURL(compressed);
+    editor.chain().focus().setImage({ src: localUrl }).createParagraphNear().run();
+
     try {
-      const { url } = await uploadNoteImage(noteId, file);
-      if (!editor) return;
-      // After the image, drop into a fresh paragraph so the caret is ready
-      // for the next thought. TrailingNode already keeps an empty paragraph
-      // at the end, but createParagraphNear places focus where the user
-      // actually wants it (right under the image they just inserted).
-      editor.chain().focus().setImage({ src: url }).createParagraphNear().run();
+      const { url: serverUrl } = await uploadNoteImage(noteId, compressed);
+      // Find the image node by its temporary blob src and rewrite the src
+      // to the server URL. ProseMirror keeps the same node identity so
+      // the caret position survives the swap.
+      let foundPos = -1;
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === 'image' && node.attrs.src === localUrl) {
+          foundPos = pos;
+          return false;
+        }
+      });
+      if (foundPos >= 0) {
+        editor.view.dispatch(editor.state.tr.setNodeAttribute(foundPos, 'src', serverUrl));
+      }
+      // Hold the blob URL briefly so the <img> can repaint with the server
+      // src without flashing a broken icon.
+      setTimeout(() => URL.revokeObjectURL(localUrl), 4000);
     } catch (err) {
       console.error('Image upload failed', err);
-      toast.error('Image upload failed');
+      toast.error(t('common_failed_save'));
+      // Remove the orphan placeholder so the user doesn't see a broken
+      // <img> sitting in the doc.
+      let foundPos = -1;
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === 'image' && node.attrs.src === localUrl) {
+          foundPos = pos;
+          return false;
+        }
+      });
+      if (foundPos >= 0) {
+        editor.view.dispatch(editor.state.tr.delete(foundPos, foundPos + 1));
+      }
+      URL.revokeObjectURL(localUrl);
     }
   }
 
@@ -283,6 +332,9 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => editor?.chain().focus().toggleOrderedList().run()} aria-label="Numbered list">
           <ListOrdered className="h-4 w-4" />
         </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => editor?.chain().focus().toggleTaskList().run()} aria-label="Checklist">
+          <ListChecks className="h-4 w-4" />
+        </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => editor?.chain().focus().toggleBlockquote().run()} aria-label="Quote">
           <Quote className="h-4 w-4" />
         </Button>
@@ -293,22 +345,7 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
           <ImageIcon className="h-4 w-4" />
         </Button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
-        <div className="ml-auto flex items-center gap-2 pr-1 text-[11px] text-muted-foreground">
-          <span className={`h-2 w-2 rounded-full ${status === 'connected' ? 'bg-green-500' : status === 'connecting' ? 'bg-amber-500' : 'bg-red-500'}`} />
-          {peers.length > 0 && (
-            <div className="flex -space-x-1.5">
-              {peers.slice(0, 3).map((p) => (
-                <span
-                  key={p.id}
-                  className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-background text-[10px] font-semibold text-white"
-                  style={{ background: p.color }}
-                  title={p.name}
-                >
-                  {p.name.charAt(0).toUpperCase()}
-                </span>
-              ))}
-            </div>
-          )}
+        <div className="ml-auto flex items-center gap-1 pr-1 text-[11px] text-muted-foreground">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editor?.chain().focus().undo().run()} aria-label="Undo">
             <Undo2 className="h-3.5 w-3.5" />
           </Button>
@@ -335,6 +372,30 @@ export function NoteEditor({ noteId, userName, userColor, noteTitle }: NoteEdito
         }}
       >
         <EditorContent editor={editor} />
+        {/* Floating quick-format menu (Notion / Bear style): appears above any
+            non-empty text selection. Shorter trip than going to the toolbar. */}
+        {editor && (
+          <BubbleMenu
+            editor={editor}
+            options={{ placement: 'top' }}
+            shouldShow={({ editor: ed, from, to }) => from !== to && ed.isEditable}
+          >
+            <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5 shadow-md">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editor.chain().focus().toggleBold().run()} aria-label="Bold">
+                <Bold className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editor.chain().focus().toggleItalic().run()} aria-label="Italic">
+                <Italic className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} aria-label="Heading">
+                <Heading2 className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => editor.chain().focus().toggleCode().run()} aria-label="Code">
+                <Code className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </BubbleMenu>
+        )}
         <div
           aria-hidden
           onClick={() => editor?.chain().focus('end').run()}

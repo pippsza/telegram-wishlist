@@ -14,6 +14,7 @@ import { getPairs } from '@/api/pairs';
 import { useAuth } from '@/context/AuthContext';
 import { useT } from '@/i18n';
 import type { Note, Pair } from '@/types';
+import type { EditorConnStatus, EditorPeer } from '@/components/notes/NoteEditor';
 
 const NoteEditor = lazy(() =>
   import('@/components/notes/NoteEditor')
@@ -42,6 +43,10 @@ export function NoteEditorPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePair, setSharePair] = useState<string>('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Realtime presence lifted out of NoteEditor so it renders in the page
+  // Header (next to the lock icon) instead of overflowing the toolbar.
+  const [connStatus, setConnStatus] = useState<EditorConnStatus>('connecting');
+  const [peers, setPeers] = useState<EditorPeer[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -95,14 +100,20 @@ export function NoteEditorPage() {
 
   if (!note) {
     return (
-      <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">{t('common_loading')}</div>
+      <div className="flex h-[100dvh] items-center justify-center text-sm text-muted-foreground">{t('common_loading')}</div>
     );
   }
 
+  const statusDot =
+    connStatus === 'connected' ? 'bg-green-500' : connStatus === 'connecting' ? 'bg-amber-500' : 'bg-red-500';
+
   return (
-    <div className="flex h-screen flex-col">
+    // 100dvh (dynamic viewport height) shrinks when the on-screen keyboard
+    // opens so the editor scroller stays the right size; plain 100vh (h-screen)
+    // does not, which used to push the caret under the keyboard.
+    <div className="flex h-[100dvh] flex-col">
       <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="flex h-14 items-center gap-2 px-2">
+        <div className="flex h-14 items-center gap-1 px-2">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -111,9 +122,32 @@ export function NoteEditorPage() {
             onChange={(e) => setTitle(e.target.value)}
             onBlur={saveTitle}
             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-            className="h-9 border-none bg-transparent px-1 text-base font-semibold focus-visible:ring-0"
+            className="h-9 min-w-0 flex-1 border-none bg-transparent px-1 text-base font-semibold focus-visible:ring-0"
             placeholder={t('notes_untitled')}
           />
+          {/* Realtime status + remote-peer avatars. Lives next to the share
+              icon so the toolbar below has room for the format buttons. */}
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`h-2 w-2 rounded-full ${statusDot}`}
+              title={connStatus}
+              aria-label={connStatus}
+            />
+            {peers.length > 0 && (
+              <div className="flex -space-x-1.5">
+                {peers.slice(0, 3).map((p) => (
+                  <span
+                    key={p.id}
+                    className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-background text-[10px] font-semibold text-white"
+                    style={{ background: p.color }}
+                    title={p.name}
+                  >
+                    {p.name.charAt(0).toUpperCase()}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <Button variant="ghost" size="icon" onClick={() => setShareOpen(true)} aria-label="Share">
             {note.pair ? <Users className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
           </Button>
@@ -125,7 +159,12 @@ export function NoteEditorPage() {
 
       <ErrorBoundary label="NoteEditor">
         <Suspense fallback={<div className="flex flex-1 items-center justify-center"><LoadingSpinner /></div>}>
-          <NoteEditor noteId={note._id} userName={user?.firstName || 'You'} noteTitle={note.title} />
+          <NoteEditor
+            noteId={note._id}
+            userName={user?.firstName || 'You'}
+            noteTitle={note.title}
+            onPresence={(s, p) => { setConnStatus(s); setPeers(p); }}
+          />
         </Suspense>
       </ErrorBoundary>
 
